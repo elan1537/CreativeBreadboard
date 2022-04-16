@@ -1,0 +1,9 @@
+*.key
+.vscode
+node_modules
+
+test_code
+images
+__pycache__
+yolov5
+frozen_east_text_detection.pb

@@ -1,0 +1,50 @@
+<html>
+  <body>
+    <h1>Crop Image</h1>
+    {% if not image_path %}
+    <div>
+      <form action="/image" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" />
+        <input type="submit" />
+      </form>
+    </div>
+    {% endif %} {% if image_path %}
+    <div>
+      <form action="/image" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" />
+        <input type="submit" onsubmit="refresh" />
+      </form>
+    </div>
+    <div style="position: relative">
+      <img
+        id="imageLayer"
+        width="100"
+        height="100"
+        style="position: absolute; left: 0; top: 0; z-index: 0"
+      />
+      <canvas
+        id="cropLayer"
+        width="100"
+        height="100"
+        style="position: absolute; left: 0; top: 0; z-index: 1"
+      ></canvas>
+    </div>
+    <div id="result"></div>
+    <script type="text/javascript">
+      function refresh() {
+        location.reload();
+        console.log("refresh");
+      }
+      var image_path =
+        "{{ url_for('static', filename='uploads/' + image_path) }}";
+      console.log(image_path);
+    </script>
+    {% endif %}
+    <script src="{{ url_for('static', filename = 'js/image.js') }}"></script>
+  </body>
+</html>
+<style>
+  canvas {
+    border: 1px solid black;
+  }
+</style>
