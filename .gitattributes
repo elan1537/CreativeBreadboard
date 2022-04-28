@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 *.pt filter=lfs diff=lfs merge=lfs -text
-=======
-.pt filter=lfs diff=lfs merge=lfs -text
->>>>>>> dbf8a3a788291e0520616b6d89fbec966129eab7
