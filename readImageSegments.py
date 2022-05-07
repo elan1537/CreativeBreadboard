@@ -1,5 +1,4 @@
 import random
-from matplotlib.pyplot import contour
 import numpy as np
 import cv2
 import json
@@ -21,7 +20,6 @@ if __name__ == "__main__":
 
         if label['shape_type'] in ['line', 'linestrip']:
             img_blk = np.zeros(shape=(img.shape[0], img.shape[1]), dtype=np.uint8)
-
             for i in range(len(points)-1):
                 x = tuple(np.array(points[i], dtype='int64'))
                 y = tuple(np.array(points[i+1], dtype='int64'))
@@ -35,8 +33,6 @@ if __name__ == "__main__":
             print(len(points) * 2)
 
             print(d.shape)
-
-            
             
             cv2.drawContours(img, contours, -1, color=(B, G, R), thickness=10, lineType=cv2.LINE_AA, maxLevel=1)
             break
