@@ -5,7 +5,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from findColor import toPerspectiveImage, test
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="./static", template_folder="./templates")
 # app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
