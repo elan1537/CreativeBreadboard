@@ -1,9 +1,7 @@
 <template>
   <div>
     <Header></Header>
-    <div class="container px-4 px-lg-5">
-      <ImageModify></ImageModify>
-    </div>
+    <router-view></router-view>
     <Footer></Footer>
   </div>
 </template>
@@ -12,7 +10,6 @@
 // import HelloWorld from "./components/HelloWorld.vue";
 // import ImageViewer from "./components/ImageViewer.vue";
 import Header from "./components/Header.vue";
-import ImageModify from "./components/ImageModify.vue";
 import Footer from "./components/Footer.vue";
 
 export default {
@@ -20,7 +17,6 @@ export default {
   components: {
     // ImageViewer,
     // HelloWorld,
-    ImageModify,
     Header,
     Footer,
   },

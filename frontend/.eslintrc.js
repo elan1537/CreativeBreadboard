@@ -16,6 +16,6 @@ module.exports = {
         "vue"
     ],
     "rules": {
-        "vue/multi-word-component-names": ["error", {"ignores": ["default", "Header", "Footer"]}]
+        "vue/multi-word-component-names": ["error", {"ignores": ["default", "Header", "Footer", "Modify", "Main"]}]
     }
 }

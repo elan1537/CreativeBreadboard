@@ -7,6 +7,6 @@ module.exports = defineConfig({
 
 module.exports = {
   chainWebpack: (config) => {
-    config.resolve.alias.set('@', path.resolve(__dirname, '/'));
+    config.resolve.alias.set('@', path.resolve(__dirname, './'));
   },
 };
