@@ -1,17 +1,10 @@
 <template>
-  <div>
-    <h1>Crop Image</h1>
-    <div>
-      <form action="/image" method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" />
-        <input type="submit" onsubmit="refresh" />
-      </form>
-    </div>
-    <div style="position: relative">
+  <div class="image-modify">
+    <div style="position: relative; margin-bottom: 100px">
       <img
         id="imageLayer"
         ref="imageLayer"
-        :src="image_path"
+        :src="img_src"
         @load="onImageLoad"
         style="z-index: 0"
       />
@@ -49,9 +42,14 @@ export default {
       image_path: require("../../../backend/static/uploads/1_LB.jpeg"),
     };
   },
-  created: function () {},
+  props: ["img_src"],
+  watch: {},
+  created: function () {
+    console.log(this.img_src);
+  },
   mounted() {
     console.log("mounted");
+    console.log(this.img_src);
     this.img_tag = this.$refs.imageLayer;
     this.canvas = document.getElementById("cropLayer");
     this.context = this.canvas.getContext("2d");
@@ -66,6 +64,7 @@ export default {
           this.canvasClear();
         }
         if (event.key === "Enter") {
+          console.log(this.points);
           if (this.pointCount >= 4) {
             const url = "http://localhost:3000/points";
             const option = {
