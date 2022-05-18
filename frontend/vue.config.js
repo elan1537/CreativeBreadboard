@@ -10,3 +10,9 @@ module.exports = {
     config.resolve.alias.set('@', path.resolve(__dirname, './'));
   },
 };
+
+module.exports = {
+  devServer: {
+        proxy : 'http://localhost:3000'
+      }
+}
