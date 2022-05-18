@@ -6,4 +6,5 @@ test_code
 images
 __pycache__
 yolov5
-static/uploads
+backend/static/uploads
+startbootstrap-small-business-gh-pages
