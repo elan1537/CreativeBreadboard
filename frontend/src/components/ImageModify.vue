@@ -42,14 +42,16 @@ export default {
       image_path: require("../../../backend/static/uploads/1_LB.jpeg"),
     };
   },
-  props: ["img_src"],
-  watch: {},
-  created: function () {
-    console.log(this.img_src);
+  props: ["img_src", "isSuccess"],
+  watch: {
+    isSuccess: function () {
+      if (this.isSuccess === true) {
+        this.canvasClear();
+        this.$emit("isSuccess", false);
+      }
+    },
   },
   mounted() {
-    console.log("mounted");
-    console.log(this.img_src);
     this.img_tag = this.$refs.imageLayer;
     this.canvas = document.getElementById("cropLayer");
     this.context = this.canvas.getContext("2d");
@@ -58,41 +60,16 @@ export default {
       "keydown",
       (event) => {
         event.preventDefault();
-        console.log(this.pointCount);
-        console.log("keydown");
         if (event.key === "Escape") {
           this.canvasClear();
-        }
-        if (event.key === "Enter") {
-          console.log(this.points);
-          if (this.pointCount >= 4) {
-            const url = "http://localhost:3000/points";
-            const option = {
-              method: "post",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                points: this.points,
-                scale: this.SCALE,
-              }),
-            };
-            fetch(url, option).then((response) => {
-              console.log(response);
-              console.log("send!!");
-              this.canvasClear();
-              window.location = "/result";
-            });
-          } else {
-            console.log("add point!!");
-          }
+          this.pointCount = 0;
+
+          this.$emit("pointCount", this.pointCount);
+          this.$emit("sendData", {});
         }
       },
       false
     );
-    window.addEventListener("keypress", () => {
-      console.log("keyPress");
-    });
   },
   methods: {
     draw(start, target) {
@@ -131,7 +108,10 @@ export default {
     onMouseDown(event) {
       if (event.button == 0) {
         if (this.pointCount <= 4) {
+          let data = { points: this.points, scale: this.SCALE };
           this.pointCount++;
+          this.$emit("pointCount", this.pointCount);
+          this.$emit("sendData", data);
           this.previousPoint = this.startPoint;
           this.points.push(this.previousPoint);
         }
@@ -164,6 +144,7 @@ export default {
       this.img_tag.height = height_size + 2;
       this.canvas.width = width_size;
       this.canvas.height = height_size;
+      console.log(width_size, height_size);
     },
     refresh() {
       location.reload();

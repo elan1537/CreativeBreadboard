@@ -5,7 +5,7 @@
       <div class="col-lg-7">
         <img
           class="img-fluid rounded mb-4 mb-lg-0"
-          :src="img_url"
+          :src="img"
           width="600"
           height="800"
           alt="..."
@@ -67,7 +67,12 @@ export default {
   data() {
     return {
       img_url: require("../../../backend/static/uploads/Circuit-7.220428.jpg"),
+      img: "data:image/png;base64,",
     };
+  },
+  mounted() {
+    let data = JSON.parse(JSON.stringify(this.$route.query)).result_image;
+    this.img += data;
   },
 };
 </script>

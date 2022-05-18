@@ -1,9 +1,14 @@
 import os, json, cv2
 import numpy as np
-from flask import Flask, redirect, render_template, request, send_file
+from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from findColor import toPerspectiveImage, test
+from findColor import test
+from findResistor import toPerspectiveImage, checkResistor
+import requests
+import base64
+
+SAVE_PATH = "./static/uploads"
 
 app = Flask(__name__, static_folder="./static", template_folder="./templates")
 # app.config.from_object(__name__)
@@ -24,35 +29,59 @@ def main():
 def image():
     if request.method == 'POST':
         global FILE_IMAGE
-        f = request.files['file']
-        f.save('./static/uploads/' + secure_filename(f.filename))
+        img_file = request.files['image']
+        data = json.load(request.files['data'])
 
-        FILE_IMAGE = f.filename
-        return redirect("/")
+        img_file_bytes = img_file.stream.read()
+        img_arr = np.frombuffer(img_file_bytes, np.uint8)
+        target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
 
-@app.route('/result', methods=["GET"])
-def result():
-    test()
-    return send_file('./images/precess_image.jpg', mimetype='image/jpg')
-
-@app.route("/points", methods=["POST"])
-def points():
-    if request.method == "POST":
-        points = json.loads(request.data)['points']
-        scale = float(json.loads(request.data)['scale'])
+        points = data["points"]
+        scale = float(data["scale"])
 
         pts = []
         for point in points:
             pts.append([int(point[0] / scale), int(point[1] / scale)])
 
-        target_image = cv2.imread(f"./static/uploads/{FILE_IMAGE}")
-        _, res = toPerspectiveImage(target_image, np.array(pts))
+        base_point, res = toPerspectiveImage(target_image, np.array(pts), 100)
 
-        cv2.imwrite("./images/res.jpg", res)
+        cv2.imwrite(f"./static/{data['img_name']}", res)
 
-        return "Success"
-    else:
-        return "Bad access"
+        _, buffer = cv2.imencode('.jpg', res)
+        jpg_as_text = base64.b64encode(buffer).decode()
+        res = requests.post("http://localhost:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text}))
+        
+        img_data = res.json()
+        # jpg_original = base64.b64decode(img_data)
+        # img_arr = np.frombuffer(jpg_original, np.uint8)
+        # target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+
+        # cv2.imwrite("result_from_post.jpg", target_image)
+
+        return jsonify(img_data)
+
+@app.route("/getResistor", methods=['POST'])
+def getResistor():
+    data = json.loads(request.get_json())
+    pts = data['pts']
+    img_res = data['img_res']
+    jpg_original = base64.b64decode(img_res)
+    img_arr = np.frombuffer(jpg_original, np.uint8)
+    target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+
+    get_resistor_picking_image = checkResistor(target_image, pts)
+
+    _, buffer = cv2.imencode('.jpg', get_resistor_picking_image)
+    jpg_as_text = base64.b64encode(buffer).decode()
+
+    return jsonify({
+        "result_image": jpg_as_text
+    })
+
+@app.route('/result', methods=["GET"])
+def result():
+    test()
+    return send_file('./images/precess_image.jpg', mimetype='image/jpg')
 
 def check():
     files = os.listdir('./static/uploads')
