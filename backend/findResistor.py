@@ -109,35 +109,26 @@ def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list
 def rectArea(df):
     return (df.xmax - df.xmin) * (df.ymax - df.ymin)
 
+def processDataFrame(origin_data, column_name):
+    df = origin_data[(origin_data["name"] == column_name) & (origin_data["confidence"] > 0.7)].copy()
+    df['area']      = df.apply(rectArea, axis=1)
+    df['center_x']  = df.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
+    df['center_y']  = df.apply(lambda row: int((row.ymax + row.ymin) / 2), axis=1)
+    df['length']    = df.apply(lambda row: int((row.xmax - row.xmin)), axis=1)
+    df['width']     = df.apply(lambda row: int((row.ymax - row.ymin)), axis=1)
+    df['distance_from_origin'] = df.apply(lambda row: int((row.xmin + row.ymin)), axis=1)
+    df = df.sort_values(by=['distance_from_origin'], ascending=True)
+
+    return df
+
+
 def checkResistor(target, base_point):
     ''' Resistor DataFrame 처리 '''
     resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
     detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
 
-    print(detect_area)
-
-    resistor_area = detect_area[(detect_area["name"] == "resistor-area") & (detect_area["confidence"] > 0.8)]
-    resistor_body = detect_area[(detect_area["name"] == "resistor-body") & (detect_area["confidence"] > 0.8)]
-
-    resistor_area['area']     = resistor_area.apply(rectArea, axis=1)
-    resistor_area['center_x'] = resistor_area.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
-    resistor_area['center_y'] = resistor_area.apply(lambda row: int((row.ymax + row.ymin) / 2), axis=1)
-    resistor_area['length'] = resistor_area.apply(lambda row: int((row.xmax - row.xmin)), axis=1)
-    resistor_area['width'] = resistor_area.apply(lambda row: int((row.ymax - row.ymin)), axis=1)
-    resistor_area['distance_from_origin'] = resistor_area.apply(lambda row: int((row.xmin + row.ymin)), axis=1)
-
-    resistor_body['area']     = resistor_body.apply(rectArea, axis=1)
-    resistor_body['center_x'] = resistor_body.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
-    resistor_body['center_y'] = resistor_body.apply(lambda row: int((row.ymax + row.ymin) / 2), axis=1)
-    resistor_body['length'] = resistor_body.apply(lambda row: int((row.xmax - row.xmin)), axis=1)
-    resistor_body['width'] = resistor_body.apply(lambda row: int((row.ymax - row.ymin)), axis=1)
-    resistor_body['distance_from_origin'] = resistor_body.apply(lambda row: int((row.xmin + row.ymin)), axis=1)
-
-    resistor_area = resistor_area.sort_values(by=['distance_from_origin'], ascending=True)
-    resistor_body = resistor_body.sort_values(by=['distance_from_origin'], ascending=True)
-
-    for i in range(len(resistor_area)):
-        row = resistor_area.iloc[i]
+    resistor_area = processDataFrame(detect_area, "resistor-area")
+    resistor_body = processDataFrame(detect_area, "resistor-body")
 
     for i in range(len(resistor_area)):
         data = resistor_area.iloc[i]
@@ -158,8 +149,6 @@ def checkResistor(target, base_point):
 
         area = cv2.morphologyEx(area, cv2.MORPH_ERODE, kernel, iterations=4)
         cv2.rectangle(result, (0, 0), (p[2] - p[0], p[3] - p[1]), (0, 255, 0), 3)
-
-        # cv2.imwrite(f"resistor_{i}.jpg", result)
                 
 
     for i in range(len(resistor_body)):
@@ -170,7 +159,6 @@ def checkResistor(target, base_point):
 
             area_from, area_to, cropped = area_padding(target, (p[0], p[1]), (p[2], p[3]), base_point[0], base_point[2])
             
-            # cv2.imwrite(f"resistor_body_{i}.jpg", cropped)
             cv2.rectangle(target, (p[0], p[1]), (p[2], p[3]), (10, 10, 210), 10)
 
     
