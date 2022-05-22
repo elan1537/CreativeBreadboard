@@ -1,4 +1,3 @@
-from audioop import findmax
 import json
 from statistics import median
 import torch
@@ -6,7 +5,7 @@ import pandas as pd
 import numpy as np
 import cv2
 from sklearn.cluster import KMeans
-from mappingDots import breadboard_bodypin_df, breadboard_voltagepin_df, transform_pts
+from test_code.mappingDots import breadboard_bodypin_df, breadboard_voltagepin_df, transform_pts
 
 MODEL_PATH = "./model/breadboard-area.model.pt"
 MODEL_LINEAREA_PATH = "./model/line-area.model.pt"
