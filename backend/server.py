@@ -10,6 +10,12 @@ import base64
 
 SAVE_PATH = "./static/uploads"
 
+# jpg_original = base64.b64decode(img_data)
+# img_arr = np.frombuffer(jpg_original, np.uint8)
+# target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+
+# cv2.imwrite("result_from_post.jpg", target_image)
+
 app = Flask(__name__, static_folder="./static", template_folder="./templates")
 # app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -45,20 +51,30 @@ def image():
 
         base_point, res = toPerspectiveImage(target_image, np.array(pts), 100)
 
-        cv2.imwrite(f"./static/{data['img_name']}", res)
+        name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
+
+        json.dump(pts, open(f"./static/uploads/{name}.json", "w"))
+
+        cv2.imwrite(f"./static/uploads/origin/{data['img_name']}", target_image)
+    
+        cv2.imwrite(f"./static/uploads/{data['img_name']}", res)
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
         res = requests.post("http://localhost:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text}))
         
         img_data = res.json()
-        # jpg_original = base64.b64decode(img_data)
-        # img_arr = np.frombuffer(jpg_original, np.uint8)
-        # target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-
-        # cv2.imwrite("result_from_post.jpg", target_image)
 
         return jsonify(img_data)
+
+@app.route("/points", methods=['POST'])
+def points():
+    data = json.load(request.files['data'])
+    points = data["points"]
+    img_name = data["img_name"]
+    print(img_name, points)
+
+    return jsonify({"message": "success"})
 
 @app.route("/getResistor", methods=['POST'])
 def getResistor():
