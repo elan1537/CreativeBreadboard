@@ -19,6 +19,39 @@ PADDING = 100
 # JSON = "images/Circuits/220504/Circuit_220504-32.json" # -> OK
 # check_points = np.array([[ 404, 524], [ 412, 3692], [2512, 3664], [2488, 512]])
 
+IMGS = [
+# "backend/static/uploads/origin/20220414_120442.jpg", 
+# "backend/static/uploads/origin/20220414_120749.jpg", 
+# "backend/static/uploads/origin/Circuit_220504-32.jpeg",
+# "backend/static/uploads/origin/Circuit-9.220512.jpeg",
+# "backend/static/uploads/origin/Circuit-26.220512.jpeg",
+# "backend/static/uploads/origin/Circuit-35.220512.jpeg",
+"backend/static/uploads/origin/Circuit-41.220428.jpg",
+"backend/static/uploads/origin/IMG_8487.JPG",
+"backend/static/uploads/origin/IMG_8545.JPG"]
+
+CHECK_POINT_JSON = [
+# "backend/static/uploads/20220414_120442.json", 
+# "backend/static/uploads/20220414_120749.json", 
+# "backend/static/uploads/Circuit_220504-32.json",
+# "backend/static/uploads/Circuit-9.220512.json",
+# "backend/static/uploads/Circuit-26.220512.json",
+# "backend/static/uploads/Circuit-35.220512.json",
+"backend/static/uploads/Circuit-41.220428.json",
+"backend/static/uploads/IMG_8487.json",
+"backend/static/uploads/IMG_8545.json"]
+
+ANNOTATION_DATA_JSON = [
+# "backend/static/uploads/points/20220414_120442.json", 
+# "backend/static/uploads/points/20220414_120749.json", 
+# "backend/static/uploads/points/Circuit_220504-32.json",
+# "backend/static/uploads/points/Circuit-9.220512.json",
+# "backend/static/uploads/points/Circuit-26.220512.json",
+# "backend/static/uploads/points/Circuit-35.220512.json",
+"backend/static/uploads/points/Circuit-41.220428.json",
+"backend/static/uploads/points/IMG_8487.json",
+"backend/static/uploads/points/IMG_8545.json"]
+
 MODEL_RESISTORAREA_PATH = "model/resistor-area.model.pt"
 DATASET = "test_code/dataset/resistor_point"
 SCALE_TO = 300
@@ -152,92 +185,94 @@ def processDataFrame(origin_data, column_name):
     return df
 
 if __name__ == "__main__":
-    img = cv2.imread(IMG, cv2.IMREAD_COLOR)
-    shapes = json.load(open(JSON, "r"))["shapes"]
-    shapes = pd.DataFrame(shapes)
+    for IMG, ANNO_JSON, ROI_JSON in zip(IMGS, ANNOTATION_DATA_JSON, CHECK_POINT_JSON):
+        img = cv2.imread(IMG, cv2.IMREAD_COLOR)
+        shapes = json.load(open(ANNO_JSON, "r"))["shapes"]
+        check_points = np.array(json.load(open(ROI_JSON, "r")))
+        shapes = pd.DataFrame(shapes)
 
-    files = None
-    if not os.path.isdir(f"{DATASET}"):
-        os.mkdir(f"{DATASET}") 
+        files = None
+        if not os.path.isdir(f"{DATASET}"):
+            os.mkdir(f"{DATASET}") 
 
-    else:
-        files = [f for f in os.listdir(DATASET) if '.jpg' in f]
- 
-    start_idx = len(files)
+        else:
+            files = [f for f in os.listdir(DATASET) if '.jpg' in f]
     
-    try:
-        training_data = json.load(open(f"{DATASET}/points.json"))
-    except FileNotFoundError as fn:
-        training_data = {}
-
-    resistor_vector = shapes[shapes['label'] == 'resistor-vector']
-
-    _, base_point, mtrx, result = toPerspectiveImage(img, check_points, PADDING)
-    detect_area = detectComponent(result, MODEL_RESISTORAREA_PATH)
-
-    resistor_body = processDataFrame(detect_area, "resistor-body")
-    resistor_area = processDataFrame(detect_area, "resistor-area")
-
-
-    for i in range(len(resistor_area)):
-        data = resistor_area.iloc[i]
-        minPoint = int(data.xmin), int(data.ymin)
-        maxPoint = int(data.xmax), int(data.ymax)
-
-        expand_to = max([maxPoint[0] - minPoint[0], maxPoint[1] - minPoint[1]])
-
-        area_start, area_end, area = area_padding(result, minPoint, maxPoint, base_point[0], base_point[2], expand_to)
-        # area_copy = area.copy()
-
-        for j in range(len(resistor_vector)):
-            pts = resistor_vector['points'].iloc[j]
+        start_idx = len(files)
         
-            for pt in pts:
-                x = round(pt[0])
-                y = round(pt[1])
+        try:
+            training_data = json.load(open(f"{DATASET}/points.json"))
+        except FileNotFoundError as fn:
+            training_data = {}
 
-                p = xyToHomocoords(x, y)
-                p = (mtrx @ p)
-                p = homocoordsToxy(p.T)
+        resistor_vector = shapes[shapes['label'] == 'resistor-vector']
 
-                x, y = p
+        cv2.imshow("before", img)
+        _, base_point, mtrx, result = toPerspectiveImage(img, check_points, PADDING)
+        detect_area = detectComponent(result, MODEL_RESISTORAREA_PATH)
 
-                if (area_start[0] <= x and x < area_end[0]) and (area_start[1] <= y and y < area_end[1]):
-                    offset = np.array([
-                        [1, 0, -area_start[0]],
-                        [0, 1, -area_start[1]],
-                        [0, 0, 1]
-                    ])
-                    p = offset @ xyToHomocoords(x, y)
+        resistor_body = processDataFrame(detect_area, "resistor-body")
+        resistor_area = processDataFrame(detect_area, "resistor-area")
 
-                    area = cv2.resize(area, (SCALE_TO, SCALE_TO))
-                    # area_copy = cv2.resize(area_copy, (SCALE_TO, SCALE_TO))
-                    to_x_sf = SCALE_TO / expand_to
-                    to_y_sf = SCALE_TO / expand_to
+        for i in range(len(resistor_area)):
+            data = resistor_area.iloc[i]
+            minPoint = int(data.xmin), int(data.ymin)
+            maxPoint = int(data.xmax), int(data.ymax)
 
-                    scaling = np.array([
-                        [ to_x_sf,       0,  (1-to_x_sf)],
-                        [       0, to_y_sf,  (1-to_y_sf)],
-                        [       0,       0,            1]
-                    ])
+            expand_to = max([maxPoint[0] - minPoint[0], maxPoint[1] - minPoint[1]])
 
-                    p = scaling @ p
+            area_start, area_end, area = area_padding(result, minPoint, maxPoint, base_point[0], base_point[2], expand_to)
+            area_copy = area.copy()
+
+            for j in range(len(resistor_vector)):
+                pts = resistor_vector['points'].iloc[j]
+
+                for pt in pts:
+                    x = round(pt[0])
+                    y = round(pt[1])
+
+                    p = xyToHomocoords(x, y)
+                    p = (mtrx @ p)
                     x, y = homocoordsToxy(p.T)
 
-                    if training_data.get(f"resistor-{start_idx}") != None:
-                        training_data[f"resistor-{start_idx}"].append([x, y])
+                    if (area_start[0] <= x and x < area_end[0]) and (area_start[1] <= y and y < area_end[1]):
+                        offset = np.array([
+                            [1, 0, -area_start[0]],
+                            [0, 1, -area_start[1]],
+                            [0, 0, 1]
+                        ])
+                        p = offset @ p
 
-                    else:
-                        training_data[f"resistor-{start_idx}"] = [[x, y]]
+                        area = cv2.resize(area, (SCALE_TO, SCALE_TO))
+                        area_copy = cv2.resize(area_copy, (SCALE_TO, SCALE_TO))
+                        to_x_sf = SCALE_TO / expand_to
+                        to_y_sf = SCALE_TO / expand_to
 
-                    # cv2.circle(area_copy, (x, y), 5, (0, 255, 0), cv2.FILLED)
-                
-            cv2.imwrite(f"{DATASET}/resistor-{start_idx}.jpg", area)
-            # cv2.imshow(f"area_{start_idx}", area_copy)
-        start_idx += 1
+                        scaling = np.array([
+                            [ to_x_sf,       0,  (1-to_x_sf)],
+                            [       0, to_y_sf,  (1-to_y_sf)],
+                            [       0,       0,            1]
+                        ])
 
-    with open(f"{DATASET}/points.json", "w") as f:
-        json.dump(training_data, f)
+                        p = scaling @ p
 
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+                        x, y = homocoordsToxy(p.T)                    
+
+                        cv2.circle(area_copy, (x, y), 10, (255, 0, 0), 10)
+    
+                        if training_data.get(f"resistor-{start_idx}") != None:
+                            training_data[f"resistor-{start_idx}"].append([x, y])
+
+                        else:
+                            training_data[f"resistor-{start_idx}"] = [[x, y]]
+                    
+                cv2.imwrite(f"{DATASET}/resistor-{start_idx}.jpg", area)
+
+            cv2.imshow(f"area_{start_idx}", area_copy)
+            start_idx += 1
+
+        with open(f"{DATASET}/points.json", "w") as f:
+            json.dump(training_data, f)
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
