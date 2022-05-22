@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import torch
 import os
+import shutil
+import time
 
 PADDING = 100
 
@@ -19,44 +21,27 @@ PADDING = 100
 # JSON = "images/Circuits/220504/Circuit_220504-32.json" # -> OK
 # check_points = np.array([[ 404, 524], [ 412, 3692], [2512, 3664], [2488, 512]])
 
-IMGS = [
-# "backend/static/uploads/origin/20220414_120442.jpg", 
-# "backend/static/uploads/origin/20220414_120749.jpg", 
-# "backend/static/uploads/origin/Circuit_220504-32.jpeg",
-# "backend/static/uploads/origin/Circuit-9.220512.jpeg",
-# "backend/static/uploads/origin/Circuit-26.220512.jpeg",
-# "backend/static/uploads/origin/Circuit-35.220512.jpeg",
-"backend/static/uploads/origin/Circuit-41.220428.jpg",
-"backend/static/uploads/origin/IMG_8487.JPG",
-"backend/static/uploads/origin/IMG_8545.JPG"]
+'''
+46
+'''
 
-CHECK_POINT_JSON = [
-# "backend/static/uploads/20220414_120442.json", 
-# "backend/static/uploads/20220414_120749.json", 
-# "backend/static/uploads/Circuit_220504-32.json",
-# "backend/static/uploads/Circuit-9.220512.json",
-# "backend/static/uploads/Circuit-26.220512.json",
-# "backend/static/uploads/Circuit-35.220512.json",
-"backend/static/uploads/Circuit-41.220428.json",
-"backend/static/uploads/IMG_8487.json",
-"backend/static/uploads/IMG_8545.json"]
+ORIGIN_IMG_PATH = "backend/static/uploads/origin_img"
+CHECK_POINT_PATH = "backend/static/uploads/check_points"
+ANNOTATION_PATH = "backend/static/uploads/annotation"
 
-ANNOTATION_DATA_JSON = [
-# "backend/static/uploads/points/20220414_120442.json", 
-# "backend/static/uploads/points/20220414_120749.json", 
-# "backend/static/uploads/points/Circuit_220504-32.json",
-# "backend/static/uploads/points/Circuit-9.220512.json",
-# "backend/static/uploads/points/Circuit-26.220512.json",
-# "backend/static/uploads/points/Circuit-35.220512.json",
-"backend/static/uploads/points/Circuit-41.220428.json",
-"backend/static/uploads/points/IMG_8487.json",
-"backend/static/uploads/points/IMG_8545.json"]
+IMGS = [ ORIGIN_IMG_PATH + "/" + img for img in os.listdir(ORIGIN_IMG_PATH) if ".jpeg" in img or ".JPG" in img or ".jpg" in img]
+CHECK_POINTS = [ CHECK_POINT_PATH + "/" +  point for point in os.listdir(CHECK_POINT_PATH) if ".json" in point ]
+ANNOTATION_DATA = [ ANNOTATION_PATH + "/" + anno for anno in os.listdir(ANNOTATION_PATH) if ".json" in anno ]
+
+IMGS = sorted(IMGS)
+CHECK_POINTS = sorted(CHECK_POINTS)
+ANNOTATION_DATA = sorted(ANNOTATION_DATA)
 
 MODEL_RESISTORAREA_PATH = "model/resistor-area.model.pt"
 DATASET = "test_code/dataset/resistor_point"
 SCALE_TO = 300
 
-def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list, canvas_to: tuple or list, expand_to = 0):
+def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list, canvas_to: tuple or list, expand_to = 0, blank = False):
     '''
         타겟 영역에서 직사각형 영역 from_에서 to_ 까지 crop한다.
         padding이 이뤄진 전체 영역인 canvas_start, canvas_to를 가지고
@@ -92,6 +77,7 @@ def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list
 
     # 110, 154 -> 350, 350
     # (350 - 110)/2 = 120, (350-154)/2 = 98
+
     if expand_to != 0:
         add_width  = int((expand_to/2 - c_x))
         add_height = int((expand_to/2 - c_y))
@@ -101,29 +87,55 @@ def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list
         x_[1] += add_width
         y_[1] += add_height
 
+        '''
+            지금 이 부분에서 문제가 있는 듯함 -> 일부 사진에서 포인트가 안맞음
+        '''
         # padding으로 확대했는데 범위를 넘어가면..
         # 범위를 넘어간 만큼 가능한 공간에서 다시 재확장된다.
+        a = 0
+        b = 0
+        c = 0
+        d = 0
+
         if x_[1] > canvas_to[0]:
             x_[1] -= add_width
             x_[0] -= add_width
+            a -= add_width
+            b += add_width
+            print(" xmax bound")
 
         if x_[0] < canvas_start[0]:
             x_[0] += add_width
             x_[1] += add_width
+            a += add_width
+            b -= add_width
+            print(" xmin bound")
 
         if y_[1] > canvas_to[1]:
             y_[1] -= add_height
             y_[0] -= add_height
+            c -= add_height
+            d += add_height
+            print(" ymax bound")
         
         if y_[0] < canvas_start[1]:
             y_[1] += add_height
             y_[0] += add_height 
+            c += add_height
+            d -= add_height
+            print(" ymin bound")
 
-    # padding 만큼 확장된 결과
-    expanded = old_area[y_[0]:y_[1], x_[0]:x_[1]]
+        if blank:
+            canvas = cv2.copyMakeBorder(to_area, add_height-c, add_height-d, add_width-a, add_width-b, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            print(add_height-c, add_height-d, add_width-a, add_width-b)
 
-    return (x_[0], y_[0]), (x_[1], y_[1]), expanded
-
+            return (x_[0], y_[0]), (x_[1], y_[1]), canvas
+        else:
+            # padding 만큼 확장된 결과
+            expanded = old_area[y_[0]:y_[1], x_[0]:x_[1]]
+            return (x_[0], y_[0]), (x_[1], y_[1]), expanded
+    else:
+        return (x_[0], y_[0]), (x_[1], y_[1]), to_area
 def toPerspectiveImage(img, points, padding = 0):
     if points.ndim != 2:
         points = points.reshape((-1, 2))
@@ -168,10 +180,6 @@ def xyToHomocoords(x, y):
 def homocoordsToxy(v):
     return int(v[0][0]/v[0][2]), int(v[0][1]/v[0][2])
 
-def detectComponent(srcImage, path):
-    resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=path)
-    return pd.DataFrame(resistor_detect_model(srcImage).pandas().xyxy[0])
-
 def processDataFrame(origin_data, column_name):
     df = origin_data[(origin_data["name"] == column_name) & (origin_data["confidence"] > 0.7)].copy()
     df['area']      = df.apply(rectArea, axis=1)
@@ -184,44 +192,60 @@ def processDataFrame(origin_data, column_name):
 
     return df
 
-if __name__ == "__main__":
-    for IMG, ANNO_JSON, ROI_JSON in zip(IMGS, ANNOTATION_DATA_JSON, CHECK_POINT_JSON):
+def main():
+    shutil.rmtree("/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/test_code/dataset/resistor_point")
+
+    RES_AREA_COUNT = 0
+    files = None
+    if not os.path.isdir(f"{DATASET}"):
+        os.mkdir(f"{DATASET}") 
+
+    else:
+        files = [f for f in os.listdir(DATASET) if '.jpg' in f or ".jpeg" in f or ".JPG" in f]
+
+    try:
+        training_data = json.load(open(f"{DATASET}/points.json"))
+    except FileNotFoundError as fn:
+        training_data = {}
+
+    start_idx = 1
+
+    print("COUNTS:: ", len(IMGS))
+
+    resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
+
+    for IMG, ANNO_JSON, ROI_JSON in zip(IMGS, ANNOTATION_DATA, CHECK_POINTS):
         img = cv2.imread(IMG, cv2.IMREAD_COLOR)
         shapes = json.load(open(ANNO_JSON, "r"))["shapes"]
         check_points = np.array(json.load(open(ROI_JSON, "r")))
         shapes = pd.DataFrame(shapes)
-
-        files = None
-        if not os.path.isdir(f"{DATASET}"):
-            os.mkdir(f"{DATASET}") 
-
-        else:
-            files = [f for f in os.listdir(DATASET) if '.jpg' in f]
-    
-        start_idx = len(files)
         
-        try:
-            training_data = json.load(open(f"{DATASET}/points.json"))
-        except FileNotFoundError as fn:
-            training_data = {}
-
         resistor_vector = shapes[shapes['label'] == 'resistor-vector']
 
-        cv2.imshow("before", img)
-        _, base_point, mtrx, result = toPerspectiveImage(img, check_points, PADDING)
-        detect_area = detectComponent(result, MODEL_RESISTORAREA_PATH)
+        # resistor_vector가 없어..?
+        if len(resistor_vector) == 0:
+            print(f"{ROI_JSON.split('/')[-1]} is no resistor_vector")
+            continue
 
-        resistor_body = processDataFrame(detect_area, "resistor-body")
+        _, base_point, mtrx, result = toPerspectiveImage(img, check_points, PADDING)
+        detect_area = pd.DataFrame(resistor_detect_model(result).pandas().xyxy[0])  
+
+        # resistor_body = processDataFrame(detect_area, "resistor-body")
         resistor_area = processDataFrame(detect_area, "resistor-area")
+        print("resistor_area: ", len(resistor_area), end='')
+        print(", summation res_count::", RES_AREA_COUNT)
+        
+        RES_AREA_COUNT += len(resistor_area)
 
         for i in range(len(resistor_area)):
             data = resistor_area.iloc[i]
-            minPoint = int(data.xmin), int(data.ymin)
-            maxPoint = int(data.xmax), int(data.ymax)
+            minPoint = round(data.xmin)-15, round(data.ymin)-15
+            maxPoint = round(data.xmax)+15, round(data.ymax)+15
 
             expand_to = max([maxPoint[0] - minPoint[0], maxPoint[1] - minPoint[1]])
 
-            area_start, area_end, area = area_padding(result, minPoint, maxPoint, base_point[0], base_point[2], expand_to)
+            cv2.rectangle(result, minPoint, maxPoint, (255, 0, 0), 5)
+            area_start, area_end, area = area_padding(result, minPoint, maxPoint, base_point[0], base_point[2], expand_to, True)
             area_copy = area.copy()
 
             for j in range(len(resistor_vector)):
@@ -236,6 +260,7 @@ if __name__ == "__main__":
                     x, y = homocoordsToxy(p.T)
 
                     if (area_start[0] <= x and x < area_end[0]) and (area_start[1] <= y and y < area_end[1]):
+                        # cv2.circle(result, (x, y), 15, (255, 0, 255), cv2.FILLED)
                         offset = np.array([
                             [1, 0, -area_start[0]],
                             [0, 1, -area_start[1]],
@@ -243,7 +268,6 @@ if __name__ == "__main__":
                         ])
                         p = offset @ p
 
-                        area = cv2.resize(area, (SCALE_TO, SCALE_TO))
                         area_copy = cv2.resize(area_copy, (SCALE_TO, SCALE_TO))
                         to_x_sf = SCALE_TO / expand_to
                         to_y_sf = SCALE_TO / expand_to
@@ -256,23 +280,43 @@ if __name__ == "__main__":
 
                         p = scaling @ p
 
-                        x, y = homocoordsToxy(p.T)                    
-
-                        cv2.circle(area_copy, (x, y), 10, (255, 0, 0), 10)
-    
-                        if training_data.get(f"resistor-{start_idx}") != None:
-                            training_data[f"resistor-{start_idx}"].append([x, y])
-
+                        x, y = homocoordsToxy(p.T)     
+                        
+                        # 검은색 영역엔 점을 찍지 않는다.
+                        if area[y, x, 0] == 0 and area[y, x, 1] == 0 and area[y, x, 2] == 0:
+                            print("         In Blank area")
                         else:
-                            training_data[f"resistor-{start_idx}"] = [[x, y]]
-                    
-                cv2.imwrite(f"{DATASET}/resistor-{start_idx}.jpg", area)
+                            # cv2.circle(area_copy, (x, y), 10, (255, 0, 0), 10)
+                            
+                            if start_idx > 0 and start_idx < 10:
+                                if training_data.get(f"resistor-0{start_idx}") != None:
+                                    training_data[f"resistor-0{start_idx}"].append([x, y])
+                                else:
+                                    training_data[f"resistor-0{start_idx}"] = [[x, y]]
+                                print(f"         saved_at :: resistor_0{start_idx}")
 
-            cv2.imshow(f"area_{start_idx}", area_copy)
+                            else:
+                                if training_data.get(f"resistor-{start_idx}") != None:
+                                    training_data[f"resistor-{start_idx}"].append([x, y])
+                                else:
+                                    training_data[f"resistor-{start_idx}"] = [[x, y]]
+                                print(f"         saved_at :: resistor_{start_idx}")
+
+
+            if start_idx > 0 and start_idx < 10:      
+                cv2.imwrite(f"{DATASET}/resistor-0{start_idx}.jpg", area_copy)
+            else:
+                cv2.imwrite(f"{DATASET}/resistor-{start_idx}.jpg", area_copy)
+
+            # cv2.imshow(f"area_copy{start_idx}", area_copy)
             start_idx += 1
 
-        with open(f"{DATASET}/points.json", "w") as f:
-            json.dump(training_data, f)
+        # cv2.imshow(f"{IMG.split('/')[-1]}", result)
+    with open(f"{DATASET}/points.json", "w") as f:
+        json.dump(training_data, f)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
