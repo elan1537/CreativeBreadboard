@@ -244,7 +244,7 @@ def main():
 
             expand_to = max([maxPoint[0] - minPoint[0], maxPoint[1] - minPoint[1]])
 
-            cv2.rectangle(result, minPoint, maxPoint, (255, 0, 0), 5)
+            # cv2.rectangle(result, minPoint, maxPoint, (255, 0, 0), 5)
             area_start, area_end, area = area_padding(result, minPoint, maxPoint, base_point[0], base_point[2], expand_to, True)
             area_copy = area.copy()
 
@@ -283,24 +283,24 @@ def main():
                         x, y = homocoordsToxy(p.T)     
                         
                         # 검은색 영역엔 점을 찍지 않는다.
-                        if area[y, x, 0] == 0 and area[y, x, 1] == 0 and area[y, x, 2] == 0:
-                            print("         In Blank area")
-                        else:
-                            # cv2.circle(area_copy, (x, y), 10, (255, 0, 0), 10)
-                            
-                            if start_idx > 0 and start_idx < 10:
-                                if training_data.get(f"resistor-0{start_idx}") != None:
-                                    training_data[f"resistor-0{start_idx}"].append([x, y])
-                                else:
-                                    training_data[f"resistor-0{start_idx}"] = [[x, y]]
-                                print(f"         saved_at :: resistor_0{start_idx}")
-
+                        # if area[y, x, 0] == 0 and area[y, x, 1] == 0 and area[y, x, 2] == 0:
+                        #     print("         In Blank area")
+                        # else:
+                        # cv2.circle(area_copy, (x, y), 7, (255, 0, 0), 10)
+                        
+                        if start_idx > 0 and start_idx < 10:
+                            if training_data.get(f"resistor-0{start_idx}") != None:
+                                training_data[f"resistor-0{start_idx}"].append([x, y])
                             else:
-                                if training_data.get(f"resistor-{start_idx}") != None:
-                                    training_data[f"resistor-{start_idx}"].append([x, y])
-                                else:
-                                    training_data[f"resistor-{start_idx}"] = [[x, y]]
-                                print(f"         saved_at :: resistor_{start_idx}")
+                                training_data[f"resistor-0{start_idx}"] = [[x, y]]
+                            print(f"         saved_at :: resistor_0{start_idx}")
+
+                        else:
+                            if training_data.get(f"resistor-{start_idx}") != None:
+                                training_data[f"resistor-{start_idx}"].append([x, y])
+                            else:
+                                training_data[f"resistor-{start_idx}"] = [[x, y]]
+                            print(f"         saved_at :: resistor_{start_idx}")
 
 
             if start_idx > 0 and start_idx < 10:      
