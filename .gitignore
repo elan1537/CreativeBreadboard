@@ -1,6 +1,9 @@
 *.key
 .vscode
 node_modules
+*.jpg
+*.jpeg
+*.JPG
 
 test_code
 images
