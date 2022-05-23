@@ -10,7 +10,7 @@
           @pointCount="checkPointCount"
         ></ImageModify>
       </div>
-      <div class="col-md-5">
+      <div class="col-md-5" style="margin-bottom: 100px">
         <form
           action="http://localhost:3000/image"
           method="POST"
