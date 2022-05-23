@@ -66,7 +66,6 @@ export default {
   name: "Result",
   data() {
     return {
-      img_url: require("../../../backend/static/uploads/Circuit-7.220428.jpg"),
       img: "data:image/png;base64,",
     };
   },
