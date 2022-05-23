@@ -7,8 +7,10 @@ from findColor import test
 from findResistor import toPerspectiveImage, checkResistor
 import requests
 import base64
+from shutil import copy
 
 SAVE_PATH = "./static/uploads"
+PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/images/Circuits"
 
 # jpg_original = base64.b64decode(img_data)
 # img_arr = np.frombuffer(jpg_original, np.uint8)
@@ -53,11 +55,12 @@ def image():
 
         name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
 
-        json.dump(pts, open(f"./static/uploads/{name}.json", "w"))
-
-        cv2.imwrite(f"./static/uploads/origin/{data['img_name']}", target_image)
-    
-        cv2.imwrite(f"./static/uploads/{data['img_name']}", res)
+        # 딥러닝 데이터셋 추가 시작
+        filepath = findfile(f"{name}.json", PROJECT_PATH)
+        json.dump(pts, open(f"./static/uploads/check_points/{name}.json", "w"))
+        copy(filepath, "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/backend/static/uploads/annotation")
+        cv2.imwrite(f"./static/uploads/origin_img/{data['img_name']}", target_image)
+        # 딥러닝 데이터셋 추가 끝
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
@@ -109,6 +112,11 @@ def check():
             global FILE_IMAGE
             FILE_IMAGE = files[-1]
             print("asdf", FILE_IMAGE)
+
+def findfile(name, path):
+    for dirpath, dirname, filename in os.walk(path):
+        if name in filename:
+            return os.path.join(dirpath, name)
 
 if __name__ == "__main__":
     check()
