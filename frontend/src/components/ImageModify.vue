@@ -39,7 +39,6 @@ export default {
       canvas: null,
       context: null,
       img_tag: null,
-      image_path: require("../../../backend/static/uploads/1_LB.jpeg"),
     };
   },
   props: ["img_src", "isSuccess"],
