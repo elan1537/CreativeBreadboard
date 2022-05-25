@@ -1,6 +1,6 @@
 <template>
   <div class="image-modify">
-    <div style="position: relative; margin-bottom: 100px">
+    <div style="position: relative">
       <img
         id="imageLayer"
         ref="imageLayer"
@@ -41,7 +41,7 @@ export default {
       img_tag: null,
     };
   },
-  props: ["img_src", "isSuccess"],
+  props: ["img_src", "isSuccess", "i_width", "i_height"],
   watch: {
     isSuccess: function () {
       if (this.isSuccess === true) {
@@ -49,11 +49,19 @@ export default {
         this.$emit("isSuccess", false);
       }
     },
+    i_width: function () {
+      console.log(this.i_width);
+    },
+    i_height: function () {
+      console.log(this.i_height);
+    },
   },
   mounted() {
     this.img_tag = this.$refs.imageLayer;
     this.canvas = document.getElementById("cropLayer");
     this.context = this.canvas.getContext("2d");
+
+    console.log(this.i_width, this.i_height);
 
     window.addEventListener(
       "keydown",
@@ -137,13 +145,16 @@ export default {
       }
     },
     onImageLoad() {
-      let width_size = parseInt(this.img_tag.width * this.SCALE);
-      let height_size = parseInt(this.img_tag.height * this.SCALE);
-      this.img_tag.width = width_size + 2;
-      this.img_tag.height = height_size + 2;
-      this.canvas.width = width_size;
-      this.canvas.height = height_size;
-      console.log(width_size, height_size);
+      let img = new Image();
+      img.src = this.img_src;
+      img.onload = () => {
+        let width_size = parseInt(img.width * this.SCALE);
+        let height_size = parseInt(img.height * this.SCALE);
+        this.img_tag.width = width_size + 2;
+        this.img_tag.height = height_size + 2;
+        this.canvas.width = width_size;
+        this.canvas.height = height_size;
+      };
     },
     refresh() {
       location.reload();
