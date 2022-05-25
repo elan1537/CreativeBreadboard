@@ -1,7 +1,7 @@
 import schemdraw
 import schemdraw.elements as e
 
-def drawDiagram(circuit: list):
+def drawDiagram(V, circuit: list):
     R_name = [[element["name"] for element in level] for level in circuit]
     R_value = [[element["value"] for element in level] for level in circuit]
 
@@ -76,29 +76,29 @@ def drawDiagram(circuit: list):
     d += (n2 := e.Dot())
     d.pop()
     d += (n3 := e.Dot())
-    d += e.SourceV().down().label('Vin').at(n3.end).reverse()
+    d += e.SourceV().down().label(f"{V}V").at(n3.end).reverse()
     d += (n4 := e.Dot())
     d += e.Line().right().endpoints(n4.end,n2.end)
 
-    d.draw()
-    d.save('project_result', dpi = 300)
+    d.save('project_result.jpg', dpi = 600)
 
 if __name__ == "__main__":
+    V = 5
     circuit = [
-        [	      
-            {"name": "R10", "value": 11},
-            {"name": "R11", "value": 21},
-            {"name": "R12", "value": 31}
-        ],
-        [     
-            {"name": "R20", "value": 41},
-            {"name": "R21", "value": 51},
-            {"name": "R22", "value": 61}
-        ], 
-        [
-            {"name": "R30", "value": 71},
-            {"name": "R31", "value": 81},
-            {"name": "R32", "value": 91}
-        ],
-    ]
-    drawDiagram(circuit)
+	[	      
+        {"name": "R10", "value": 3},
+		{"name": "R11", "value": 3},
+        {"name": "R11", "value": 3},
+    ],
+	[     
+		{"name": "R21", "value": 2},
+        {"name": "R21", "value": 2},
+	], 
+	[
+		{"name": "R30", "value": 6},
+		{"name": "R31", "value": 6},
+        {"name": "R31", "value": 6},
+	],
+]
+
+    drawDiagram(V, circuit)
