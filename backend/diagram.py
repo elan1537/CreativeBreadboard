@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import schemdraw
 import schemdraw.elements as e
 
@@ -18,13 +20,13 @@ def drawDiagram(V, circuit: list):
 
                     # 위쪽 저항
                     parallelR += e.Line().up(parallelR.unit/2)
-                    parallelR += (R_1:= e.RES().right().label([str(R_name[r][0]), str(R_value[r][0])+'$\Omega$']))
+                    parallelR += (R_1:= e.RES().right().label([str(R_name[r][0]), '\n' + str(R_value[r][0])+'$\Omega$']))
                     parallelR += e.Line().down(parallelR.unit/2)
                     parallelR.pop()
 
                     # 아래쪽
                     parallelR += e.Line().down(parallelR.unit/2)
-                    parallelR += (R_2:= e.RES().right().label([str(R_name[r][1]), str(R_value[r][1])+'$\Omega$']))
+                    parallelR += (R_2:= e.RES().right().label([str(R_name[r][1]), '\n' + str(R_value[r][1])+'$\Omega$']))
                     parallelR += e.Line().up(parallelR.unit/2)
 
                     # 직선
@@ -40,19 +42,19 @@ def drawDiagram(V, circuit: list):
 
                     # 위쪽
                     parallelR += e.Line().up(parallelR.unit/2)
-                    parallelR += (R_1:= e.Resistor().right().label([str(R_name[r][0]), str(R_value[r][0])+'$\Omega$']))
+                    parallelR += (R_1:= e.Resistor().right().label([str(R_name[r][0]), '\n' + str(R_value[r][0])+'$\Omega$']))
                     parallelR += e.Line().down(parallelR.unit/2)
                     parallelR.pop()
 
                     # 아래쪽
                     parallelR.push()
                     parallelR += e.Line().down(parallelR.unit/2)
-                    parallelR += (R_2:= e.Resistor().right().label([str(R_name[r][2]), str(R_value[r][2])+'$\Omega$']))
+                    parallelR += (R_2:= e.Resistor().right().label([str(R_name[r][2]), '\n' + str(R_value[r][2])+'$\Omega$']))
                     parallelR += e.Line().up(parallelR.unit/2)
                     parallelR.pop()
 
                     # 중간
-                    parallelR += (R_3:= e.Resistor().label([str(R_name[r][1]), str(R_value[r][1])+'$\Omega$']))
+                    parallelR += (R_3:= e.Resistor().label([str(R_name[r][1]), '\n' + str(R_value[r][1])+'$\Omega$']))
 
                     # 직선
                     parallelR += e.Line().right(parallelR.unit/4)
@@ -61,7 +63,7 @@ def drawDiagram(V, circuit: list):
     #저항 1개
         elif len(R_value[r]) ==1:
             with schemdraw.Drawing(show=False) as p:        
-                p += e.Resistor().label([str(R_name[r][0]), str(R_value[r][0])+'$\Omega$'])
+                p += e.Resistor().label([str(R_name[r][0]), '\n' + str(R_value[r][0])+'$\Omega$'])
             components.append(p)
     #저항 없을 때        
     else:
@@ -76,11 +78,12 @@ def drawDiagram(V, circuit: list):
     d += (n2 := e.Dot())
     d.pop()
     d += (n3 := e.Dot())
-    d += e.SourceV().down().label(f"{V}V").at(n3.end).reverse()
+    d += e.SourceV().down().label(V).at(n3.end).reverse()
     d += (n4 := e.Dot())
     d += e.Line().right().endpoints(n4.end,n2.end)
 
-    d.save('project_result.jpg', dpi = 600)
+    r = d.get_imagedata('jpg')
+    return r
 
 if __name__ == "__main__":
     V = 5
