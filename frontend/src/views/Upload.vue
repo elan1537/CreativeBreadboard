@@ -12,7 +12,7 @@
       </div>
       <div class="col-md-5">
         <form
-          action="http://localhost:3000/image"
+          action="/image"
           method="POST"
           enctype="multipart/form-data"
         >
