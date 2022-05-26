@@ -108,7 +108,7 @@ def image():
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
-        res = requests.post("http://localhost:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text}))
+        res = requests.post("http://137.184.95.69:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text}))
         
         img_data = res.json()
 
