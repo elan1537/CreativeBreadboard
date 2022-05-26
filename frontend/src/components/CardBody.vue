@@ -9,19 +9,14 @@
       </p>
     </div>
     <div class="card-footer">
-      <slot name="footer">
-        <ButtonModal></ButtonModal>
-      </slot>
+      <slot name="footer"> </slot>
     </div>
   </div>
 </template>
 <script>
-import ButtonModal from "../components/ButtonModal.vue";
 export default {
   data() {},
-  props: ["title", "text"],
   mounted() {},
   methods: {},
-  components: { ButtonModal },
 };
 </script>
