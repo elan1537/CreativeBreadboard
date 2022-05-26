@@ -16,6 +16,7 @@
 <script>
 export default {
   data() {},
+  props: ["title"],
   mounted() {},
   methods: {},
 };
