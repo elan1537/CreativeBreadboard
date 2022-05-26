@@ -2,12 +2,27 @@ import os, json, cv2
 import numpy as np
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 from flask_cors import CORS
-from werkzeug.utils import secure_filename
 from findColor import test
 from findResistor import toPerspectiveImage, checkResistor
 import requests
 import base64
 from shutil import copy
+from diagram import drawDiagram
+
+circuit_component_data = [
+    [
+        { "name": "R10", "value": 50 },
+    ],
+    [       
+        { "name": "R20", "value": 50 },
+        { "name": "R21", "value": 50 }
+    ],
+    [
+        { "name": "R30", "value": 100 },
+        { "name": "R31", "value": 100 },
+        { "name": "R32", "value": 3000 }
+    ]
+]
 
 SAVE_PATH = "./static/uploads"
 PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/images/Circuits"
@@ -32,6 +47,35 @@ def main():
         return render_template("image.html", image_path = FILE_IMAGE)
     else:
         return render_template("image.html")
+
+@app.route("/resistor", methods=['GET', 'POST'])
+def resistor():
+    if request.method == 'GET':
+        return jsonify({
+            "state": "success",
+            "data": circuit_component_data
+        })
+    if request.method == 'POST':
+        resistor_value = request.get_json()
+
+        for r in resistor_value:
+            for row in circuit_component_data:
+                for col in row:
+                    if r['name'] == col['name']:
+                        col['value'] = int(r['value'])
+
+        return jsonify({
+            "state": "success"
+        })
+
+@app.route("/draw", methods=["GET"])
+def draw():
+    if request.method == 'GET':
+        image_bytes = drawDiagram(5, circuit_component_data)
+        return jsonify({
+            "state": "success",
+            "circuit": base64.b64encode(image_bytes).decode()
+        })
 
 @app.route("/image", methods=['POST'])
 def image():
