@@ -10,6 +10,9 @@ MODEL_RESISTORBODY_PATH = "../model/resistor.body.pt"
     이미지 왜곡 수정 함수 
     padding 만큼 여백을 주어 왜곡 수정을 한다.
 '''
+
+resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
+
 def toPerspectiveImage(img, points, padding = 0):
     if points.ndim != 2:
         points = points.reshape((-1, 2))
@@ -124,7 +127,11 @@ def processDataFrame(origin_data, column_name):
 
 def checkResistor(target, base_point):
     ''' Resistor DataFrame 처리 '''
-    resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
+    global resistor_detect_model
+
+    if resistor_detect_model is None:
+        resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
+        
     detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
 
     resistor_area = processDataFrame(detect_area, "resistor-area")
