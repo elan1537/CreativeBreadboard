@@ -1,5 +1,7 @@
 import matplotlib
+import matplotlib.pyplot as plt
 matplotlib.use('Agg')
+
 import schemdraw
 import schemdraw.elements as e
 
@@ -83,6 +85,8 @@ def drawDiagram(V, circuit: list):
     d += e.Line().right().endpoints(n4.end,n2.end)
 
     r = d.get_imagedata('jpg')
+    plt.clf()
+    plt.close('all')
     return r
 
 if __name__ == "__main__":
