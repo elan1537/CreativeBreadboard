@@ -18,10 +18,10 @@
           <li class="nav-item">
             <router-link class="nav-link" to="/upload">Upload</router-link>
           </li>
-          <li class="nav-item">
+          <li v-if="isShowing" class="nav-item">
             <router-link class="nav-link" to="/modify">Modify</router-link>
           </li>
-          <li class="nav-item">
+          <li v-if="isShowing" class="nav-item">
             <router-link class="nav-link" to="/result">Result</router-link>
           </li>
         </ul>
@@ -29,3 +29,23 @@
     </div>
   </nav>
 </template>
+<script>
+export default {
+  data() {
+    return {
+      isShowing: false,
+    };
+  },
+  created() {
+    let img = localStorage.img;
+    // let origin_img = localStorage.origin_img;
+    // let circuit_img = localStorage.circuit_img;
+
+    if (img) {
+      this.isShowing = true;
+    } else {
+      this.isShowing = false;
+    }
+  },
+};
+</script>

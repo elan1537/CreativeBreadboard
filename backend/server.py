@@ -1,6 +1,7 @@
+import datetime
 import os, json, cv2
 import numpy as np
-from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for, session
 from flask_cors import CORS
 from findColor import test
 from findResistor import toPerspectiveImage, checkResistor
@@ -34,6 +35,9 @@ PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022
 # cv2.imwrite("result_from_post.jpg", target_image)
 
 app = Flask(__name__, static_folder="./static", template_folder="./templates")
+app.secret_key = 'f#@&v08@#&*fnvn'
+app.permanent_session_lifetime = datetime.timedelta(hours=4)
+
 # app.config.from_object(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -81,6 +85,12 @@ def draw():
 def image():
     if request.method == 'POST':
         global FILE_IMAGE
+
+        # access_ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+
+        # if session.get('visitor') is None:
+        #     session['visitor'] = {access_ip: {}}
+
         img_file = request.files['image']
         data = json.load(request.files['data'])
 
@@ -97,6 +107,8 @@ def image():
 
         base_point, res = toPerspectiveImage(target_image, np.array(pts), 100)
 
+        # print(session['visitor'][access_ip].keys())
+
         name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
 
         # 딥러닝 데이터셋 추가 시작
@@ -108,11 +120,18 @@ def image():
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
-        res = requests.post("http://localhost:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text}))
-        
+        res = requests.post("http://localhost:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text, 'scale': scale}))
+    
         img_data = res.json()
 
+        print(img_data.keys())
+
         return jsonify(img_data)
+
+@app.route("/detectResistor", methods=['GET'])
+def detectResistor():
+    # return jsonify()
+    pass
 
 @app.route("/points", methods=['POST'])
 def points():
@@ -128,17 +147,21 @@ def getResistor():
     data = json.loads(request.get_json())
     pts = data['pts']
     img_res = data['img_res']
+    scale = data['scale']
     jpg_original = base64.b64decode(img_res)
     img_arr = np.frombuffer(jpg_original, np.uint8)
     target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
 
-    get_resistor_picking_image = checkResistor(target_image, pts)
+    get_resistor_picking_image, area_points = checkResistor(target_image, pts)
 
     _, buffer = cv2.imencode('.jpg', get_resistor_picking_image)
     jpg_as_text = base64.b64encode(buffer).decode()
 
     return jsonify({
-        "result_image": jpg_as_text
+        "result_image": jpg_as_text,
+        "origin_img": img_res,
+        "area_points": json.loads(area_points),
+        "scale": scale
     })
 
 @app.route('/result', methods=["GET"])

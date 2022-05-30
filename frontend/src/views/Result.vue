@@ -70,8 +70,18 @@ export default {
     };
   },
   mounted() {
-    let data = JSON.parse(JSON.stringify(this.$route.query)).result_image;
-    this.img += data;
+    if (localStorage.img) {
+      this.img += localStorage.img;
+    } else {
+      let data = JSON.parse(JSON.stringify(this.$route.query)).result_image;
+
+      if (data) {
+        this.img += data;
+      } else {
+        alert("먼저 회로 사진을 업로드 해주세요");
+        location.href = "/upload";
+      }
+    }
   },
 };
 </script>

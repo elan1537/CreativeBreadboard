@@ -5,7 +5,7 @@
       <div class="col-md-7">
         <ImageModify
           :img_src="image"
-          :isSuccess="isSuccess"
+          :isSuccess="false"
           @sendData="receiveData"
           @pointCount="checkPointCount"
         ></ImageModify>
@@ -100,7 +100,13 @@ export default {
           })
             .then((response) => {
               this.isSuccess = true;
-              console.log(response.data);
+              localStorage.img = response.data.result_image;
+              localStorage.origin_img = response.data.origin_img;
+              localStorage.area_points = JSON.stringify(
+                response.data.area_points
+              );
+              localStorage.scale = response.data.scale;
+
               this.$router.push({
                 name: "Result",
                 query: response.data,

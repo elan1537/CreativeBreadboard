@@ -15,9 +15,6 @@
 </template>
 <script>
 export default {
-  data() {},
-  props: ["title"],
-  mounted() {},
-  methods: {},
+  props: ["title", "text"],
 };
 </script>

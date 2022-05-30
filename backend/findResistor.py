@@ -124,14 +124,13 @@ def processDataFrame(origin_data, column_name):
 
     return df
 
-
 def checkResistor(target, base_point):
     ''' Resistor DataFrame 처리 '''
     global resistor_detect_model
 
     if resistor_detect_model is None:
         resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
-        
+
     detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
 
     resistor_area = processDataFrame(detect_area, "resistor-area")
@@ -170,4 +169,4 @@ def checkResistor(target, base_point):
 
     
     cv2.imwrite(f"total_result.jpg", target)
-    return target
+    return target, resistor_area.transpose().to_json()
