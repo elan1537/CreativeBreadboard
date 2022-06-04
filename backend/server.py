@@ -4,26 +4,13 @@ import numpy as np
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for, session
 from flask_cors import CORS
 from findColor import test
-from findResistor import toPerspectiveImage, checkResistor
+from findComponents import toPerspectiveImage, checkResistorArea, checkResistorBody, checkLinearea, checkLineEndArea
 import requests
 import base64
 from shutil import copy
 from diagram import drawDiagram
 
-circuit_component_data = [
-    [
-        { "name": "R10", "value": 50 },
-    ],
-    [       
-        { "name": "R20", "value": 50 },
-        { "name": "R21", "value": 50 }
-    ],
-    [
-        { "name": "R30", "value": 100 },
-        { "name": "R31", "value": 100 },
-        { "name": "R32", "value": 3000 }
-    ]
-]
+circuit_component_data = []
 
 SAVE_PATH = "./static/uploads"
 PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/images/Circuits"
@@ -109,22 +96,20 @@ def image():
 
         # print(session['visitor'][access_ip].keys())
 
-        name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
+        # name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
 
-        # 딥러닝 데이터셋 추가 시작
-        filepath = findfile(f"{name}.json", PROJECT_PATH)
-        json.dump(pts, open(f"./static/uploads/check_points/{name}.json", "w"))
-        copy(filepath, "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/backend/static/uploads/annotation")
-        cv2.imwrite(f"./static/uploads/origin_img/{data['img_name']}", target_image)
-        # 딥러닝 데이터셋 추가 끝
+        # # 딥러닝 데이터셋 추가 시작
+        # filepath = findfile(f"{name}.json", PROJECT_PATH)
+        # json.dump(pts, open(f"./static/uploads/check_points/{name}.json", "w"))
+        # copy(filepath, "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/backend/static/uploads/annotation")
+        # cv2.imwrite(f"./static/uploads/origin_img/{data['img_name']}", target_image)
+        # # 딥러닝 데이터셋 추가 끝
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
-        res = requests.post("http://localhost:3000/getResistor", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text, 'scale': scale}))
+        res = requests.post("http://localhost:3000/detect", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text, 'scale': scale}))
     
         img_data = res.json()
-
-        print(img_data.keys())
 
         return jsonify(img_data)
 
@@ -142,8 +127,11 @@ def points():
 
     return jsonify({"message": "success"})
 
-@app.route("/getResistor", methods=['POST'])
-def getResistor():
+@app.route("/detect", methods=['POST'])
+def detect():
+    # 이미지 프로세싱
+    global circuit_component_data
+
     data = json.loads(request.get_json())
     pts = data['pts']
     img_res = data['img_res']
@@ -152,15 +140,35 @@ def getResistor():
     img_arr = np.frombuffer(jpg_original, np.uint8)
     target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
 
-    get_resistor_picking_image, area_points = checkResistor(target_image, pts)
+    
+    get_resistor_area_picking_image, resistor_area_points = checkResistorArea(target_image, pts)
+    get_resistor_body_picking_image, resistor_body_points = checkResistorBody(target_image, pts)
+    get_linearea_picking_image, linearea_points = checkLinearea(target_image, pts)
+    get_lineendarea_picking_image, lineendarea_points = checkLineEndArea(target_image, pts)
 
-    _, buffer = cv2.imencode('.jpg', get_resistor_picking_image)
+    resistor_body_obj = json.loads(resistor_body_points)
+    resistor_area_obj = json.loads(resistor_area_points)
+    linearea_obj = json.loads(linearea_points)
+
+
+    resistor_count = len(resistor_body_obj)
+
+    circuit_component_data = [[{"name": f"R{r}", "value": 10}] for r in range(resistor_count)]
+
+    _, buffer = cv2.imencode('.jpg', get_resistor_body_picking_image)
     jpg_as_text = base64.b64encode(buffer).decode()
 
     return jsonify({
         "result_image": jpg_as_text,
         "origin_img": img_res,
-        "area_points": json.loads(area_points),
+        "circuit": base64.b64encode(drawDiagram(5, circuit_component_data)).decode(),
+        "area_points": json.loads(resistor_body_points),
+        "detected_components": {
+            "resistor_area": json.loads(resistor_area_points),
+            "resistor_body": json.loads(resistor_body_points),
+            "line_area": json.loads(linearea_points),
+            "lineend_area": json.loads(lineendarea_points) 
+        },
         "scale": scale
     })
 
@@ -187,4 +195,4 @@ def findfile(name, path):
 
 if __name__ == "__main__":
     check()
-    app.run(debug=True, host='0.0.0.0', port=3000)
+    app.run(debug=False, use_reloader=True, host='0.0.0.0', port=3000)
