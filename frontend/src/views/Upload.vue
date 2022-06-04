@@ -102,6 +102,17 @@ export default {
               this.isSuccess = true;
               localStorage.img = response.data.result_image;
               localStorage.origin_img = response.data.origin_img;
+              localStorage.circuit_img = response.data.circuit;
+
+              Object.keys(response.data.area_points).map((key) => {
+                let row = response.data.area_points[key];
+                row.cbRGB = [
+                  parseInt(Math.random() * 255),
+                  parseInt(Math.random() * 255),
+                  parseInt(Math.random() * 255),
+                ];
+              });
+
               localStorage.area_points = JSON.stringify(
                 response.data.area_points
               );

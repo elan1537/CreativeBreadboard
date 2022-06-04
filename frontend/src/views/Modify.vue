@@ -146,6 +146,7 @@ export default {
       area_points: null,
       circuit_img: null,
       isDrawing: false,
+      isDraging: false,
       startX: null,
       startY: null,
       cbRGB: null,
@@ -154,7 +155,6 @@ export default {
     };
   },
   created() {
-    console.log("created");
     if (localStorage.circuit_img) {
       this.circuit_img = "data:image/png;base64," + localStorage.circuit_img;
     } else {
@@ -188,6 +188,7 @@ export default {
     });
   },
   mounted() {
+    window.addEventListener("mouseup", this.stopDrag);
     this.uploaded_img = "data:image/png;base64," + localStorage.origin_img;
     this.img_tag = this.$refs.imageLayer;
     this.canvas = this.$refs.canvas;
@@ -243,38 +244,51 @@ export default {
         this.canvas.height = height_size;
 
         Object.keys(this.area_points).forEach((key) => {
-          let [xmin, ymin, l, width] = [
-            parseInt(this.area_points[key].xmin * this.scale),
-            parseInt(this.area_points[key].ymin * this.scale),
-            parseInt(this.area_points[key]["length"] * this.scale),
-            parseInt(this.area_points[key].width * this.scale),
-          ];
+          let row = this.area_points[key];
 
-          let [r, g, b] = [
-            parseInt(Math.random() * 255),
-            parseInt(Math.random() * 255),
-            parseInt(Math.random() * 255),
+          let [xmin, ymin, xmax, ymax] = [
+            row.xmin * this.scale,
+            row.ymin * this.scale,
+            row.xmax * this.scale,
+            row.ymax * this.scale,
           ];
 
           this.context.beginPath();
           this.context.lineWidth = 4;
-          this.context.strokeStyle = `rgb(${r}, ${g}, ${b})`;
-          this.context.rect(xmin, ymin, l, width);
+          this.context.strokeStyle = `rgb(${row.cbRGB[0]}, ${row.cbRGB[1]}, ${row.cbRGB[2]})`;
+          this.context.rect(xmin, ymin, xmax - xmin, ymax - ymin);
           this.context.stroke();
           this.context.closePath();
         });
       };
     },
     onMove(event) {
+      if (!this.isDraging) return;
+
       if (this.isDrawing) {
-        console.log("onMove");
         let currentX = event.offsetX;
         let currentY = event.offsetY;
 
         this.finalWidth = currentX - this.startX;
         this.finalHeight = currentY - this.startY;
 
-        // this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        Object.keys(this.area_points).map((key) => {
+          let row = this.area_points[key];
+          let xmin = row.xmin * this.scale;
+          let ymin = row.ymin * this.scale;
+          let xmax = row.xmax * this.scale;
+          let ymax = row.ymax * this.scale;
+
+          this.context.beginPath();
+          this.context.lineWidth = 4;
+          this.context.strokeStyle = `rgb(${row.cbRGB[0]}, ${row.cbRGB[1]}, ${row.cbRGB[2]})`;
+          this.context.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
+          this.context.stroke();
+          this.context.closePath();
+        });
+
         this.context.beginPath();
         this.context.lineWidth = 4;
         this.context.strokeStyle = `rgb(${this.cbRGB[0]}, ${this.cbRGB[1]}, ${this.cbRGB[2]})`;
@@ -289,26 +303,46 @@ export default {
       }
     },
     onDown(event) {
+      console.log(event.offsetX, event.offsetY);
+      Object.keys(this.area_points).map((key) => {
+        let row = this.area_points[key];
+
+        let [xmin, ymin, xmax, ymax] = [
+          row.xmin * this.scale,
+          row.ymin * this.scale,
+          row.xmax * this.scale,
+          row.ymax * this.scale,
+        ];
+
+        console.log(xmin, ymin, xmax, ymax, event.offsetX, event.offsetY);
+
+        console.log(xmin <= event.offsetX);
+
+        if (
+          xmin <= event.offsetX &&
+          event.offsetX <= xmax &&
+          ymin <= event.offsetY &&
+          event.ofsetY <= ymax
+        ) {
+          console.log(key, "area");
+        }
+      });
+
+      this.isDraging = true;
+
       if (!this.isDrawing) {
         this.isDrawing = true;
         this.startX = event.offsetX;
         this.startY = event.offsetY;
-
         this.cbRGB = [
           parseInt(Math.random() * 255),
           parseInt(Math.random() * 255),
           parseInt(Math.random() * 255),
         ];
       } else {
-        let [r, g, b] = [
-          parseInt(Math.random() * 255),
-          parseInt(Math.random() * 255),
-          parseInt(Math.random() * 255),
-        ];
-
         this.context.beginPath();
         this.context.lineWidth = 4;
-        this.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+        this.strokeStyle = `rgb(${this.cbRGB[0]}, ${this.cbRGB[1]}, ${this.cbRGB[2]})`;
         this.context.rect(
           this.startX,
           this.startY,
@@ -317,11 +351,66 @@ export default {
         );
         this.context.stroke();
         this.context.closePath();
-
-        this.startX = null;
-        this.startY = null;
-        this.isDrawing = false;
       }
+    },
+    stopDrag() {
+      let lastKey = Object.keys(this.area_points);
+      lastKey = parseInt(lastKey[lastKey.length - 1]);
+      lastKey += 1;
+
+      // 만약 뺐는데 음수이면 반대..
+      // 아니면 양수
+      // 그려질 때 거꾸로 그려짐..
+
+      let x_min = 0;
+      let y_min = 0;
+      let x_max = 0;
+      let y_max = 0;
+      let wid = 0;
+      let hei = 0;
+
+      x_min = this.startX;
+      y_min = this.startY;
+      x_max = this.startX + this.finalWidth;
+      y_max = this.startY + this.finalHeight;
+
+      let y_dif = y_max - y_min;
+
+      if (y_dif < 0) {
+        let [t1, t2] = [x_min, y_min];
+        x_min = x_max;
+        y_min = y_max;
+        x_max = t1;
+        y_max = t2;
+      }
+
+      x_min /= this.scale;
+      y_min /= this.scale;
+      x_max /= this.scale;
+      y_max /= this.scale;
+
+      wid = Math.abs(this.finalWidth) / this.scale;
+      hei = Math.abs(this.finalHeight) / this.scale;
+
+      let new_obj = {
+        xmin: x_min,
+        ymin: y_min,
+        length: hei,
+        width: wid,
+        xmax: x_max,
+        ymax: y_max,
+        confidence: 1.0,
+        cbRGB: this.cbRGB,
+      };
+
+      this.area_points[lastKey] = new_obj;
+
+      this.isDraging = false;
+      this.startX = null;
+      this.startY = null;
+      this.finalHeight = null;
+      this.finalWidth = null;
+      this.isDrawing = false;
     },
   },
   components: { CardBody },
