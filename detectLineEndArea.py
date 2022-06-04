@@ -7,9 +7,9 @@ import cv2
 from sklearn.cluster import KMeans
 from test_code.mappingDots import breadboard_bodypin_df, breadboard_voltagepin_df, transform_pts
 
-MODEL_PATH = "./model/breadboard-area.model.pt"
-MODEL_LINEAREA_PATH = "./model/line-area.model.pt"
-MODEL_LINE_ENDPOINT_PATH = "./model/line-endpoint.model.pt"
+MODEL_PATH = "model/breadboard-area.model.pt"
+MODEL_LINEAREA_PATH = "model/line-area.model.pt"
+MODEL_LINE_ENDPOINT_PATH = "model/line-endpoint.model.pt"
 # IMG = "./images/Circuits/220428/Circuit-12.220428.jpg"
 # IMG = "./images/Circuits/220428/Circuit-7.220428.jpg"
 # IMG = "./images/res.jpg" # 브레드보드만 딴 이미지
@@ -17,7 +17,7 @@ MODEL_LINE_ENDPOINT_PATH = "./model/line-endpoint.model.pt"
 # IMG = "./static/uploads/IMG_4413.jpg" # -> OK
 # check_points = np.array([[ 500,  568], [ 488, 3692], [2520, 3696], [2580, 588]])
 
-IMG = "./static/uploads/20220414_115935.jpg" # -> ERROR .. 타겟 영역이 오른쪽 핀 영역까지 침범함 -> 해결
+IMG = "images/Circuits/220414/20220414_115935.jpg" # -> ERROR .. 타겟 영역이 오른쪽 핀 영역까지 침범함 -> 해결
 check_points = np.array([[ 676,  220], [ 668, 2724], [2320, 2736], [2332,  224]])
 
 # IMG = "./images/Circuits/220404/2_LB.jpeg" # -> OK
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     pin_target = target.copy()
 
-    pinmap = json.load(open("./static/data/pinmap.json"))
+    pinmap = json.load(open("backend/static/data/pinmap.json"))
 
     body_pinmap = breadboard_bodypin_df(pinmap, PADDING)
     vol_pinmap = breadboard_voltagepin_df(pinmap, PADDING)
