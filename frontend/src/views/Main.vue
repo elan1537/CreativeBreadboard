@@ -1,3 +1,5 @@
 <template>
-  <div>Main</div>
+  <div>
+    Hi asdfasdfas
+  </div>
 </template>
