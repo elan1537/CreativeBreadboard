@@ -22,11 +22,11 @@ MODEL_LINE_ENDPOINT_PATH = "model/line-endpoint.model.pt"
 # IMG = "./static/uploads/IMG_4413.jpg" # -> OK
 # check_points = np.array([[ 500,  568], [ 488, 3692], [2520, 3696], [2580, 588]])
 
-IMG = "images/Circuits/220414/20220414_115935.jpg" # -> ERROR .. 타겟 영역이 오른쪽 핀 영역까지 침범함 -> 해결
-check_points = np.array([[ 676,  220], [ 668, 2724], [2320, 2736], [2332,  224]])
+# IMG = "images/Circuits/220414/20220414_115935.jpg" # -> ERROR .. 타겟 영역이 오른쪽 핀 영역까지 침범함 -> 해결
+# check_points = np.array([[ 676,  220], [ 668, 2724], [2320, 2736], [2332,  224]])
 
-# IMG = "./images/Circuits/220404/2_LB.jpeg" # -> OK
-# check_points = np.array([[ 544,  704], [ 528, 3620], [2376, 3576], [2252,  876]])
+IMG = "images/Circuits/220404/2_LB.jpeg" # -> OK
+check_points = np.array([[ 544,  704], [ 528, 3620], [2376, 3576], [2252,  876]])
 
 # IMG = "./static/uploads/Circuit_220504-32.jpeg" # -> OK
 # check_points = np.array([[ 404, 524], [ 412, 3692], [2512, 3664], [2488, 512]])
@@ -302,41 +302,6 @@ if __name__ == "__main__":
             area = cv2.cvtColor(area, cv2.COLOR_BGR2GRAY)
             _, area = cv2.threshold(area, -1, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV)
             area = cv2.morphologyEx(area, cv2.MORPH_OPEN, kernel, iterations=7)
-
-
-            # templat = 255 * np.ones((40, 40), np.uint8)
-            # templat = np.pad(templat, (5, 5), 'constant', constant_values=0)
-            # res = cv2.matchTemplate(area, templat, cv2.TM_CCOEFF_NORMED)
-            # thresh = 0.7
-            # box_loc = np.where(res >= thresh)
-
-            # for box in zip(*box_loc[::-1]):
-            #     startX, startY = box
-            #     endY, endX = templat.shape 
-            #     endX += startX + 5
-            #     endY += startY + 5
-            #     cv2.rectangle(color_area, (startX, startY), (endX, endY), (0, 0, 255), 2)
-
-
-            contours, hierarchy = cv2.findContours(area, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-            # max_area, max_contour = findMaxArea(contours)
-
-            # if max_contour is not None:
-            #     min_rect = cv2.minAreaRect(max_contour)
-            #     bbox = np.uint0(cv2.boxPoints(min_rect))
-            #     cv2.drawContours(color_area, [bbox], 0, (90, 175, 183), 5)
-
-            for contour in contours:
-                min_rect = cv2.minAreaRect(contour)
-                bbox = np.uint0(cv2.boxPoints(min_rect))
-                cv2.drawContours(color_area, [bbox], -1, (90, 175, 183), 5)
-                
-            #     ep3 = 0.1 * cv2.arcLength(contour, True)
-            #     approx3 = cv2.approxPolyDP(contour, ep3, True)
-            #     cv2.drawContours(color_area, [approx3], -1, (0, 255, 0), 3)
-
-                # print(ep3, len(approx3))
 
             ''' 클러스터링 시작 '''
             dbsc = DBSCAN(eps=1, min_samples=5, metric = 'euclidean', algorithm ='auto')
