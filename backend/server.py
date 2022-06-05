@@ -183,22 +183,10 @@ def result():
     test()
     return send_file('./images/precess_image.jpg', mimetype='image/jpg')
 
-def check():
-    files = os.listdir('./static/uploads')
-    print(files)
-
-    if files:
-        print("files ok")
-        if '.jpg' in files[-1] or '.jpeg' in files[-1] or '.png' in files[-1]:
-            global FILE_IMAGE
-            FILE_IMAGE = files[-1]
-            print("asdf", FILE_IMAGE)
-
 def findfile(name, path):
     for dirpath, dirname, filename in os.walk(path):
         if name in filename:
             return os.path.join(dirpath, name)
 
 if __name__ == "__main__":
-    check()
     app.run(debug=False, use_reloader=True, host='0.0.0.0', port=3000)
