@@ -80,7 +80,7 @@ def drawDiagram(V, circuit: list):
     d += (n2 := e.Dot())
     d.pop()
     d += (n3 := e.Dot())
-    d += e.SourceV().down().label(V).at(n3.end).reverse()
+    d += e.SourceV().down().label(f"{V}V").at(n3.end).reverse()
     d += (n4 := e.Dot())
     d += e.Line().right().endpoints(n4.end,n2.end)
 
