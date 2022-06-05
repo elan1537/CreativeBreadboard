@@ -13,6 +13,15 @@
       </div>
       <div class="col-lg-5">
         <div class="row">
+          <img
+            class="img-fluid rounded mb-4 mb-lg-4"
+            :src="circuit"
+            width="600"
+            height="800"
+            alt="..."
+          />
+        </div>
+        <div class="row">
           <div class="col">
             <div class="dropdown">
               <div class="d-grid gap-2">
@@ -67,11 +76,13 @@ export default {
   data() {
     return {
       img: "data:image/png;base64,",
+      circuit: "data:image/png;base64,",
     };
   },
   mounted() {
     if (localStorage.img) {
       this.img += localStorage.img;
+      this.circuit += localStorage.circuit_img;
     } else {
       let data = JSON.parse(JSON.stringify(this.$route.query)).result_image;
 

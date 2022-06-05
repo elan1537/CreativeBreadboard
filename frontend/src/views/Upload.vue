@@ -17,6 +17,15 @@
           enctype="multipart/form-data"
         >
           <div class="mb-3">
+            <label for="a" class="form-label">전압 입력</label>
+            <input
+              type="number"
+              class="form-control"
+              placeholder="V 단위로 입력하세요"
+              @input="setVoltage"
+            />
+          </div>
+          <div class="mb-3">
             <label for="formFile" class="form-label">회로 이미지 입력</label>
             <input
               class="form-control"
@@ -56,11 +65,15 @@ export default {
       image_data: "",
       image_raw: "",
       pointCount: "",
+      voltage: null,
       isSuccess: false,
     };
   },
   watch: {},
   methods: {
+    setVoltage(event) {
+      this.voltage = event.target.value;
+    },
     uploadImg() {
       var image = this.$refs["image"].files[0];
       const url = URL.createObjectURL(image);
@@ -78,9 +91,12 @@ export default {
       if (this.pointCount < 4) {
         console.log(this.pointCount);
       } else {
-        if (this.image_data && this.image) {
+        if (this.image_data && this.image && this.voltage) {
           this.image_data["img_name"] = this.image_raw.name;
+          this.image_data["voltage"] = this.voltage;
           let points = JSON.stringify(this.image_data);
+
+          console.log(points);
 
           // file은 json에 포함될 수 없음
           let data = new FormData();
@@ -99,10 +115,13 @@ export default {
             data: data,
           })
             .then((response) => {
+              console.log(response.data);
               this.isSuccess = true;
               localStorage.img = response.data.result_image;
               localStorage.origin_img = response.data.origin_img;
               localStorage.circuit_img = response.data.circuit;
+
+              console.log(response.data.area_points);
 
               Object.keys(response.data.area_points).map((key) => {
                 let row = response.data.area_points[key];
@@ -116,6 +135,13 @@ export default {
               localStorage.area_points = JSON.stringify(
                 response.data.area_points
               );
+              localStorage.circuit_analysis = JSON.stringify(
+                response.data.circuit_analysis
+              );
+              localStorage.detected_components = JSON.stringify(
+                response.data.detected_components
+              );
+
               localStorage.scale = response.data.scale;
 
               this.$router.push({
