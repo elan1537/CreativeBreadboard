@@ -41,6 +41,8 @@ MODEL_RESISTORAREA_PATH = "model/resistor-area.model.pt"
 DATASET = "test_code/dataset/resistor_point"
 SCALE_TO = 300
 
+resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
+
 def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list, canvas_to: tuple or list, expand_to = 0, blank = False):
     '''
         타겟 영역에서 직사각형 영역 from_에서 to_ 까지 crop한다.
@@ -193,7 +195,7 @@ def processDataFrame(origin_data, column_name):
     return df
 
 def main():
-    shutil.rmtree("/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/test_code/dataset/resistor_point")
+    # shutil.rmtree("/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/test_code/dataset/resistor_point")
 
     RES_AREA_COUNT = 0
     files = None
@@ -212,7 +214,7 @@ def main():
 
     print("COUNTS:: ", len(IMGS))
 
-    resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
+    
 
     for IMG, ANNO_JSON, ROI_JSON in zip(IMGS, ANNOTATION_DATA, CHECK_POINTS):
         img = cv2.imread(IMG, cv2.IMREAD_COLOR)
@@ -227,8 +229,8 @@ def main():
             print(f"{ROI_JSON.split('/')[-1]} is no resistor_vector")
             continue
 
-        _, base_point, mtrx, result = toPerspectiveImage(img, check_points, PADDING)
-        detect_area = pd.DataFrame(resistor_detect_model(result).pandas().xyxy[0])  
+        _, base_point, mtrx, result = toPerspectiveImage(img, check_points, PADDING) # 원근변환 check_point 가지고
+        detect_area = pd.DataFrame(resistor_detect_model(result).pandas().xyxy[0])   # 원근변환 된 이미지로 resistor 검출
 
         # resistor_body = processDataFrame(detect_area, "resistor-body")
         resistor_area = processDataFrame(detect_area, "resistor-area")
