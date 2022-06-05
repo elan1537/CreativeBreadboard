@@ -1,10 +1,15 @@
 import json
+from re import A
 from statistics import median
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
 import torch
 import pandas as pd
 import numpy as np
 import cv2
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from test_code.mappingDots import breadboard_bodypin_df, breadboard_voltagepin_df, transform_pts
 
 MODEL_PATH = "model/breadboard-area.model.pt"
@@ -164,7 +169,7 @@ if __name__ == "__main__":
 
     src_shape = (base_point[2][1] - base_point[0][1], base_point[2][0] - base_point[0][0])
 
-    cv2.imshow('no_map', pin_target)
+    # cv2.imshow('no_map', pin_target)
 
     for C in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
         for R in range(30):
@@ -182,7 +187,7 @@ if __name__ == "__main__":
 
             # cv2.circle(target, (x, y), 15, (25, 150, 255), cv2.FILLED)
 
-    cv2.imshow("pin_target", target)
+    # cv2.imshow("pin_target", target)
 
     line_endpoint_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_LINE_ENDPOINT_PATH)
 
@@ -201,7 +206,7 @@ if __name__ == "__main__":
 
             start_, end_, pad_area = area_padding(target, (p[0], p[1]), (p[2], p[3]), base_point[0], base_point[2], expand_to = 320)
             area = pad_area.copy()
-            cv2.imshow(f"areawraew_{i}", area)
+            # cv2.imshow(f"areawraew_{i}", area)
             color_area = area.copy()
 
             cv2.rectangle(target, start_, end_, (0, 255, 0), 5)
@@ -298,7 +303,6 @@ if __name__ == "__main__":
             _, area = cv2.threshold(area, -1, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV)
             area = cv2.morphologyEx(area, cv2.MORPH_OPEN, kernel, iterations=7)
 
-            cv2.imshow(f"threshold_{i}", area)
 
             # templat = 255 * np.ones((40, 40), np.uint8)
             # templat = np.pad(templat, (5, 5), 'constant', constant_values=0)
@@ -335,51 +339,33 @@ if __name__ == "__main__":
                 # print(ep3, len(approx3))
 
             ''' 클러스터링 시작 '''
-            area_coords = np.array(np.where(area == 0)).reshape(-1, 2)
+            dbsc = DBSCAN(eps=1, min_samples=5, metric = 'euclidean', algorithm ='auto')
+            
+            areas = np.array(np.where(area != 0))
+            dbsc.fit_predict(areas.T)
 
-            kmeans = KMeans(n_clusters=1, tol=0.01)
-            kmeans.fit(area_coords)
+            labels = set(dbsc.labels_)
 
-            centroid = kmeans.cluster_centers_
+            max_area_label = -2
+            max_area_width = -1
+            for label in labels:
+                segmentated = np.where(dbsc.labels_ == label)
+                if (a:=len(segmentated[0])) > max_area_width:
+                    max_area_label = label
+                    max_area_width = a
 
-            for coord in centroid:
-                center = int(coord[0]), int(coord[1])
-                cv2.circle(color_area, center, 15, (255, 255, 0), cv2.FILLED)
-                cv2.circle(area, center, 15, (0, 0, 0), cv2.FILLED)
+            segmentated = np.array(list(set(np.where(dbsc.labels_ == max_area_label)[0]).intersection(dbsc.core_sample_indices_)))
+            
+            mask_img = np.zeros(area.shape)
+            coords = areas.T[segmentated]
 
+            for coord in coords:
+                mask_img[coord[0], coord[1]] = 230
+
+            cv2.imshow(f"threshold_origin_{i}", area)
+            cv2.imshow(f"segmentation_{i}", mask_img)
             ''' 클러스터링 끝 '''
-            # 255로 크기 맞춤
-            # h, w
-            # to_x1 = 0; to_x2 = 0; to_y1 = 0; to_y2 = 0;
-            # if int((255 - area.shape[0])/2) % 2 == 1:
-            #     to_x1 = int((255 - area.shape[0])/2)
-            #     to_x2 = to_x1 + 1
-            # else:
-            #     to_x1 = to_x2 = int((255 - area.shape[0])/2)
-                
-            # if int((255 - area.shape[1])/2) % 2 == 1:
-            #     to_y1 = int((255 - area.shape[1])/2)
-            #     to_y2 = to_y1 + 1
-            # else:
-            #     to_y1 = to_y2 = int((255 - area.shape[1])/2)
-
-            # print((to_x1, to_x2), (to_y1, to_y2))
-
-            # area = np.pad(area, ((to_x1, to_x2), (to_y1, to_y2)), 'constant', constant_values=255)
-            # 256을 넘어가는 영역이 인식 됨..
-
-            # area = cv2.resize(area, (500, 500))
-            # color_area = cv2.resize(color_area, (500, 500))
-            cv2.imshow(f"b_{i}", color_area)
-
-            # palate = np.hstack((palate, area))
-            # palate_3d = np.hstack((palate_3d, color_area))
-
-            # view = area.view(dtype=np.uint8, type=np.matrix)
-            # np.savetxt(f"b_{i}.txt", view, fmt="%3d", delimiter=" ")
-        # cv2.imshow(f"end_point_res", palate)
-        # cv2.imshow(f"end_point_3d", palate_3d)
-
-    cv2.imshow("res", target)
+          
+    # cv2.imshow("res", target)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
