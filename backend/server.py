@@ -9,8 +9,10 @@ import requests
 import base64
 from shutil import copy
 from diagram import drawDiagram
+from calcVoltageAndCurrent import calcCurrentAndVoltage
 
 circuit_component_data = []
+V = None
 
 SAVE_PATH = "./static/uploads"
 PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/images/Circuits"
@@ -71,7 +73,7 @@ def draw():
 @app.route("/image", methods=['POST'])
 def image():
     if request.method == 'POST':
-        global FILE_IMAGE
+        global FILE_IMAGE, V
 
         # access_ip = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
 
@@ -87,6 +89,7 @@ def image():
 
         points = data["points"]
         scale = float(data["scale"])
+        V = int(data["voltage"])
 
         pts = []
         for point in points:
@@ -112,11 +115,6 @@ def image():
         img_data = res.json()
 
         return jsonify(img_data)
-
-@app.route("/detectResistor", methods=['GET'])
-def detectResistor():
-    # return jsonify()
-    pass
 
 @app.route("/points", methods=['POST'])
 def points():
@@ -150,10 +148,13 @@ def detect():
     resistor_area_obj = json.loads(resistor_area_points)
     linearea_obj = json.loads(linearea_points)
 
-
     resistor_count = len(resistor_body_obj)
 
     circuit_component_data = [[{"name": f"R{r}", "value": 10}] for r in range(resistor_count)]
+
+    R_TH, I, NODE_VOL = calcCurrentAndVoltage(V, circuit_component_data)
+
+    print(R_TH, I, NODE_VOL)
 
     _, buffer = cv2.imencode('.jpg', get_resistor_body_picking_image)
     jpg_as_text = base64.b64encode(buffer).decode()
@@ -161,13 +162,18 @@ def detect():
     return jsonify({
         "result_image": jpg_as_text,
         "origin_img": img_res,
-        "circuit": base64.b64encode(drawDiagram(5, circuit_component_data)).decode(),
+        "circuit": base64.b64encode(drawDiagram(V, circuit_component_data)).decode(),
         "area_points": json.loads(resistor_body_points),
         "detected_components": {
             "resistor_area": json.loads(resistor_area_points),
             "resistor_body": json.loads(resistor_body_points),
             "line_area": json.loads(linearea_points),
             "lineend_area": json.loads(lineendarea_points) 
+        },
+        "circuit_analysis": {
+            "r_th": str(R_TH),
+            "node_current": str(I),
+            "node_voltage": str(NODE_VOL)
         },
         "scale": scale
     })
