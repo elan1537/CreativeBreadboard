@@ -13,6 +13,6 @@ module.exports = {
 
 module.exports = {
   devServer: {
-        proxy : '137.184.95.69:3000'
+        proxy : 'http://137.184.95.69:3000'
       }
 }
