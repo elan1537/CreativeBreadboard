@@ -307,9 +307,20 @@ export default {
         }).then((response) => {
           let img_data = response.data["circuit"];
 
+          axios({
+            url: "/calc",
+            method: "get",
+            headers: { "Content-Type": "application/json" },
+          }).then((response) => {
+            console.log(response.data);
+            localStorage.circuit_analysis = JSON.stringify(
+              response.data.circuit_analysis
+            );
+          });
+
           localStorage.circuit_img = img_data;
           this.circuit_img = "data:image/png;base64," + img_data;
-          window.location.reload();
+          // window.location.reload();
         });
       });
     },
