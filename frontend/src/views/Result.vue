@@ -21,7 +21,7 @@
             alt="..."
           />
         </div>
-        <div class="row">
+        <div class="row mb-3">
           <div class="col">
             <div class="dropdown">
               <div class="d-grid gap-2">
@@ -36,9 +36,16 @@
                   전압
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                  <li><a class="dropdown-item" href="#">젠장</a></li>
-                  <li><a class="dropdown-item" href="#">하나도</a></li>
-                  <li><a class="dropdown-item" href="#">모르겠어</a></li>
+                  <li
+                    v-for="(row, idx) in JSON.parse(
+                      circuit_analysis['node_voltage']
+                    )"
+                    :key="`${row}_${idx}`"
+                  >
+                    <a class="dropdown-item"
+                      >Node-{{ idx }}::{{ parseFloat(row[0]).toFixed(3) }}V</a
+                    >
+                  </li>
                 </ul>
               </div>
             </div>
@@ -57,14 +64,17 @@
                   전류
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-                  <li><a class="dropdown-item" href="#">전문가를</a></li>
-                  <li><a class="dropdown-item" href="#">모셔서</a></li>
-                  <li><a class="dropdown-item" href="#">합시다</a></li>
+                  <li>
+                    {{
+                      parseFloat(circuit_analysis["node_current"]).toFixed(3)
+                    }}A
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
+        <div class="row">합성저항 :: {{ circuit_analysis["r_th"] }}</div>
       </div>
     </div>
   </div>
@@ -77,12 +87,15 @@ export default {
     return {
       img: "data:image/png;base64,",
       circuit: "data:image/png;base64,",
+      circuit_analysis: null,
     };
   },
-  mounted() {
+  created() {
     if (localStorage.img) {
       this.img += localStorage.img;
       this.circuit += localStorage.circuit_img;
+      this.circuit_analysis = JSON.parse(localStorage.circuit_analysis);
+      console.log(this.circuit_analysis);
     } else {
       let data = JSON.parse(JSON.stringify(this.$route.query)).result_image;
 

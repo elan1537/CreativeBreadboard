@@ -125,6 +125,19 @@ def points():
 
     return jsonify({"message": "success"})
 
+@app.route("/calc", methods=["get"])
+def calc():
+    global circuit_component_data
+    R_TH, I, NODE_VOL = calcCurrentAndVoltage(V, circuit_component_data)
+    
+    return jsonify({
+        "circuit_analysis": {
+            "r_th": str(R_TH),
+            "node_current": str(I),
+            "node_voltage": str(NODE_VOL)
+        }
+    })
+
 @app.route("/detect", methods=['POST'])
 def detect():
     # 이미지 프로세싱
