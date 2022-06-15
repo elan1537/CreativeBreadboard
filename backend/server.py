@@ -12,7 +12,7 @@ from diagram import drawDiagram
 from calcVoltageAndCurrent import calcCurrentAndVoltage
 
 circuit_component_data = []
-V = None
+V = 5
 
 SAVE_PATH = "./static/uploads"
 PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/images/Circuits"
@@ -61,10 +61,23 @@ def resistor():
             "state": "success"
         })
 
+@app.route("/area", methods=["POST"])
+def area():
+    if request.method == "POST":
+        data = request.get_json()
+
+        for key in data.keys():
+            circuit_component_data.append([{"name": f"R{key}", "value": 10}])
+
+        return jsonify({
+            "state": "success"
+        })
+
 @app.route("/draw", methods=["GET"])
 def draw():
     if request.method == 'GET':
-        image_bytes = drawDiagram(5, circuit_component_data)
+        print(circuit_component_data)
+        image_bytes = drawDiagram(V, circuit_component_data)
         return jsonify({
             "state": "success",
             "circuit": base64.b64encode(image_bytes).decode()
@@ -95,18 +108,17 @@ def image():
         for point in points:
             pts.append([int(point[0] / scale), int(point[1] / scale)])
 
-        base_point, res = toPerspectiveImage(target_image, np.array(pts), 100)
+        base_point, res = toPerspectiveImage(target_image, np.array(pts), 150)
 
         # print(session['visitor'][access_ip].keys())
 
-        # name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
-
-        # # 딥러닝 데이터셋 추가 시작
-        # filepath = findfile(f"{name}.json", PROJECT_PATH)
-        # json.dump(pts, open(f"./static/uploads/check_points/{name}.json", "w"))
-        # copy(filepath, "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/backend/static/uploads/annotation")
-        # cv2.imwrite(f"./static/uploads/origin_img/{data['img_name']}", target_image)
-        # # 딥러닝 데이터셋 추가 끝
+        # 딥러닝 데이터셋 추가 시작
+        name = data["img_name"].replace(".jpeg", "").replace(".jpg", "").replace(".JPG" ,"")
+        filepath = findfile(f"{name}.json", PROJECT_PATH)
+        json.dump(pts, open(f"./static/uploads/check_points/{name}.json", "w"))
+        copy(filepath, "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/backend/static/uploads/annotation")
+        cv2.imwrite(f"./static/uploads/origin_img/{data['img_name']}", target_image)
+        # 딥러닝 데이터셋 추가 끝
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
@@ -161,9 +173,11 @@ def detect():
     resistor_area_obj = json.loads(resistor_area_points)
     linearea_obj = json.loads(linearea_points)
 
+    resistor_body_key = list(resistor_body_obj.keys())
+
     resistor_count = len(resistor_body_obj)
 
-    circuit_component_data = [[{"name": f"R{r}", "value": 10}] for r in range(resistor_count)]
+    circuit_component_data = [[{"name": f"R{key}", "value": 10}] for key in resistor_body_key]
 
     R_TH, I, NODE_VOL = calcCurrentAndVoltage(V, circuit_component_data)
 

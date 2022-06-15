@@ -192,7 +192,8 @@ def checkLinearea(target, base_point):
         result = area.copy()
 
         area = cv2.cvtColor(area, cv2.COLOR_BGR2GRAY)
-        _, area = cv2.threshold(area, -1, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
+        _, area = cv2.threshold(area, 
+        -1, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
         kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5, 5))
 
         area = cv2.morphologyEx(area, cv2.MORPH_ERODE, kernel, iterations=4)
@@ -237,7 +238,6 @@ def checkLineEndArea(target, base_point):
     cv2.imwrite(f"linearea_total_result.jpg", target)
     return target, line_end_area.transpose().to_json()
 
-
 def checkResistorArea(target, base_point):
     ''' Resistor DataFrame 처리 '''
     global resistor_detect_model
@@ -275,7 +275,6 @@ def checkResistorArea(target, base_point):
                 
     cv2.imwrite(f"total_result.jpg", target)
     return target, resistor_area.transpose().to_json()
-
 
 def checkResistorBody(target, base_point):
     ''' Resistor DataFrame 처리 '''
