@@ -15,23 +15,11 @@ from test_code.mappingDots import breadboard_bodypin_df, breadboard_voltagepin_d
 MODEL_PATH = "model/breadboard-area.model.pt"
 MODEL_LINEAREA_PATH = "model/line-area.model.pt"
 MODEL_LINE_ENDPOINT_PATH = "model/line-endpoint.model.pt"
-# IMG = "./images/Circuits/220428/Circuit-12.220428.jpg"
-# IMG = "./images/Circuits/220428/Circuit-7.220428.jpg"
-# IMG = "./images/res.jpg" # 브레드보드만 딴 이미지
 
-# IMG = "./static/uploads/IMG_4413.jpg" # -> OK
-# check_points = np.array([[ 500,  568], [ 488, 3692], [2520, 3696], [2580, 588]])
+IMG = "images/Circuits/220504/Circuit_220504-32.jpeg" # -> OK
+check_points = np.array([[ 404, 524], [ 412, 3692], [2512, 3664], [2488, 512]])
 
-# IMG = "images/Circuits/220414/20220414_115935.jpg" # -> ERROR .. 타겟 영역이 오른쪽 핀 영역까지 침범함 -> 해결
-# check_points = np.array([[ 676,  220], [ 668, 2724], [2320, 2736], [2332,  224]])
-
-IMG = "images/Circuits/220404/2_LB.jpeg" # -> OK
-check_points = np.array([[ 544,  704], [ 528, 3620], [2376, 3576], [2252,  876]])
-
-# IMG = "./static/uploads/Circuit_220504-32.jpeg" # -> OK
-# check_points = np.array([[ 404, 524], [ 412, 3692], [2512, 3664], [2488, 512]])
-
-PADDING = 0
+PADDING = 100
 
 def findMaxArea(contours):
     max_contour = None
@@ -85,14 +73,15 @@ def toPerspectiveImage(img, points):
     mtrx = cv2.getPerspectiveTransform(pts1, pts2)
     return pts2, cv2.warpPerspective(img, mtrx, (width + 2*PADDING, height + 2*PADDING), flags=cv2.INTER_CUBIC)
 
-def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list, canvas_to: tuple or list, expand_to = 0):
+def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list, canvas_to: tuple or list, expand_to = 0, blank = False):
     '''
         타겟 영역에서 직사각형 영역 from_에서 to_ 까지 crop한다.
         padding이 이뤄진 전체 영역인 canvas_start, canvas_to를 가지고
         새롭게 crop 하는영역이 관심영역 (브레드보드 영역 안쪽)에만 잘리게 한다.
 
-        expand_to로 주위 핀을 찾기위해 확장한다.
+        expand_to로 중점을 중심으로 주위 핀을 찾기위해 확장한다.
     '''
+
     # 범위를 넘어가나?
     x_ = [from_[0], to_[0]]
     y_ = [from_[1], to_[1]]
@@ -115,39 +104,118 @@ def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list
 
     to_area = old_area[y_[0]:y_[1], x_[0]:x_[1]]
 
+    c_x = to_area.shape[1]/2
+    c_y = to_area.shape[0]/2
+
     # 110, 154 -> 350, 350
     # (350 - 110)/2 = 120, (350-154)/2 = 98
+
     if expand_to != 0:
-        add_width  = int((expand_to - to_area.shape[1]) / 2)
-        add_height = int((expand_to - to_area.shape[0]) / 2)
+        add_width  = int((expand_to/2 - c_x))
+        add_height = int((expand_to/2 - c_y))
 
         x_[0] -= add_width
         y_[0] -= add_height
         x_[1] += add_width
         y_[1] += add_height
 
+        '''
+            지금 이 부분에서 문제가 있는 듯함 -> 일부 사진에서 포인트가 안맞음
+        '''
         # padding으로 확대했는데 범위를 넘어가면..
         # 범위를 넘어간 만큼 가능한 공간에서 다시 재확장된다.
+        a = 0
+        b = 0
+        c = 0
+        d = 0
+
         if x_[1] > canvas_to[0]:
             x_[1] -= add_width
             x_[0] -= add_width
+            a -= add_width
+            b += add_width
+            print(" xmax bound")
 
         if x_[0] < canvas_start[0]:
             x_[0] += add_width
             x_[1] += add_width
+            a += add_width
+            b -= add_width
+            print(" xmin bound")
 
         if y_[1] > canvas_to[1]:
             y_[1] -= add_height
             y_[0] -= add_height
+            c -= add_height
+            d += add_height
+            print(" ymax bound")
         
         if y_[0] < canvas_start[1]:
             y_[1] += add_height
             y_[0] += add_height 
+            c += add_height
+            d -= add_height
+            print(" ymin bound")
 
-    # padding 만큼 확장된 결과
-    expanded = old_area[y_[0]:y_[1], x_[0]:x_[1]]
+        if blank:
+            canvas = cv2.copyMakeBorder(to_area, add_height-c, add_height-d, add_width-a, add_width-b, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            print(add_height-c, add_height-d, add_width-a, add_width-b)
 
-    return (x_[0], y_[0]), (x_[1], y_[1]), expanded
+            return (x_[0], y_[0]), (x_[1], y_[1]), canvas
+        else:
+            # padding 만큼 확장된 결과
+            expanded = old_area[y_[0]:y_[1], x_[0]:x_[1]]
+            return (x_[0], y_[0]), (x_[1], y_[1]), expanded
+    else:
+        return (x_[0], y_[0]), (x_[1], y_[1]), to_area
+
+def findCandidateCoords(area_start, area_end, bodymap, volmap):
+    search_map = None
+    table_idx = []
+
+    index_map = {
+        0: "V1",
+        1: "V2",
+        2: "A",
+        3: "B",
+        4: "C",
+        5: "D",
+        6: "E",
+        7: "F",
+        8: "G",
+        9: "H",
+        10: "I",
+        11: "J",
+        12: "V3",
+        13: "V4"
+    }
+
+    search_map = pd.concat([volmap.iloc[:, 0:4], bodymap, volmap.iloc[:, 4:8]], axis=1)
+
+    pin_x = [search_map.iloc[:, col].mean() - PADDING for col in range(0, len(search_map.columns), 2)]
+    pin_x = np.array(pin_x, np.uint32)
+    range_x = np.array(np.where(((pin_x >= area_start[0]) & (pin_x <= area_end[0]))))[0].tolist()
+    col_name = [index_map[idx] for idx in range_x]
+
+    isVContains = ["V" in col for col in col_name]
+
+    for vc in isVContains:
+        if vc == False:
+            pin_y = [search_map.iloc[row, range(5, 24, 2)].mean() - PADDING for row in range(30)]
+
+        else:
+            pin_y = [search_map.iloc[row, [1, 3, 25, 27]].mean() - PADDING for row in range(25)]
+        
+    pin_y = np.array(pin_y, np.float64)
+    range_y = np.array(np.where(((pin_y >= area_start[1]) & (pin_y <= area_end[1]))))[0].tolist()
+    row_name = [idx+1 for idx in range_y]
+
+    for col in col_name:
+        for row in row_name:
+            table_idx.append(f"{col}{row}")
+
+    return table_idx
+
 
 if __name__ == "__main__":
     rng = 0.05
@@ -161,6 +229,18 @@ if __name__ == "__main__":
 
     pinmap = json.load(open("backend/static/data/pinmap.json"))
 
+    pinmap_shape = pinmap["shape"]
+
+    start_point = np.array([
+        [0, 0], 
+        [pinmap_shape[1], 0], 
+        [pinmap_shape[1], pinmap_shape[0]],  
+        [0, pinmap_shape[0]]
+    ], dtype=np.float32)
+
+    base_point = base_point.astype(np.float32)
+    transform_mtrx = cv2.getPerspectiveTransform(start_point, base_point)
+
     body_pinmap = breadboard_bodypin_df(pinmap, PADDING)
     vol_pinmap = breadboard_voltagepin_df(pinmap, PADDING)
 
@@ -169,25 +249,21 @@ if __name__ == "__main__":
 
     src_shape = (base_point[2][1] - base_point[0][1], base_point[2][0] - base_point[0][0])
 
-    # cv2.imshow('no_map', pin_target)
-
     for C in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
         for R in range(30):
-            x, y = transform_pts(body_pinmap, src_shape, pinmap_shape, 0, C, R)
-            body_pinmap.xs(R)[C]['x'] = x
-            body_pinmap.xs(R)[C]['y'] = y
+            x, y = transform_pts(body_pinmap, transform_mtrx, C, R)
+            body_pinmap.xs(R)[C]['x'] = round(x)
+            body_pinmap.xs(R)[C]['y'] = round(y)
 
             # cv2.circle(target, (body_pinmap.xs(R)[C]['x'], body_pinmap.xs(R)[C]['y']), 15, (0, 20, 255), cv2.FILLED)
 
     for V in ['V1', 'V2', 'V3', 'V4']:
         for R in range(25):
-            x, y = transform_pts(vol_pinmap, src_shape, pinmap_shape, 0, V, R)
-            vol_pinmap.xs(R)[V]['x'] = x
-            vol_pinmap.xs(R)[V]['y'] = y
+            x, y = transform_pts(vol_pinmap, transform_mtrx, V, R)
+            vol_pinmap.xs(R)[V]['x'] = round(x)
+            vol_pinmap.xs(R)[V]['y'] = round(y)
 
-            # cv2.circle(target, (x, y), 15, (25, 150, 255), cv2.FILLED)
-
-    # cv2.imshow("pin_target", target)
+            # cv2.circle(target, (vol_pinmap.xs(R)[V]['x'], vol_pinmap.xs(R)[V]['y']), 15, (25, 150, 255), cv2.FILLED)
 
     line_endpoint_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_LINE_ENDPOINT_PATH)
 
@@ -197,111 +273,57 @@ if __name__ == "__main__":
     palate = np.zeros((500, 500))
     palate_3d = np.zeros((500, 500, 3))
 
-    breadboard_image_center = pin_target.shape[1], pin_target.shape[0]
+    breadboard_image_center = (pin_target.shape[1]/2, pin_target.shape[0]/2)
 
     for i in range(len(r)):
         data = r.iloc[i]
         if data.confidence > 0.5:
             p = [int(data.xmin), int(data.ymin), int(data.xmax), int(data.ymax)] # 검출된 전선 꼭지 영역 좌표
 
-            start_, end_, pad_area = area_padding(target, (p[0], p[1]), (p[2], p[3]), base_point[0], base_point[2], expand_to = 320)
+            start_, end_, pad_area = area_padding(target, (p[0], p[1]), (p[2], p[3]), base_point[0], base_point[2], expand_to = 300, blank=False)
             area = pad_area.copy()
-            # cv2.imshow(f"areawraew_{i}", area)
             color_area = area.copy()
 
             cv2.rectangle(target, start_, end_, (0, 255, 0), 5)
-
-
+            cv2.imshow(f"pad_area{i}", pad_area)
             '''
                 영역안에 들어있는 후보핀 체크
             '''
-            search_map = None
-            cols = None
-            x_s = None
-            idx = None
-
-            if p[2] > breadboard_image_center[0]/2:
-                search_map = body_pinmap.loc[:, "F":"J"]
-                cols = ["F", "G", "H", "I", "J", "PIN_END", "V3", "V4", "END"]  
-
-                x_s  = [ int(breadboard_image_center[0]/2) ]
-                x_s += [ int(search_map[col, "x"].median()) for col in cols[:5] ]
-                x_s += [ int((x_s[-1] + median(vol_pinmap.loc[:, "V3"]["x"].tolist()))/2) ]
-                x_s += [ median(vol_pinmap.loc[:, "V3"]["x"].tolist()), median(vol_pinmap.loc[:, "V4"]["x"].tolist()), breadboard_image_center[0] ]
-
-                # 그럼 J 부터 X까지도 있겠지..
-                x_s = np.array(x_s, np.uint32)
-                cols = np.array(cols, np.str0)
-                idx = np.array(np.where((x_s > start_[0]) & (x_s < end_[0]))[0]) - 1
-                # idx = np.append(idx, [idx[-1]+1])
-
-            else:
-                search_map = body_pinmap.loc[:, "A":"E"]
-                cols = [ "START", "V1", "V2", "PIN_START", "A", "B", "C", "D", "E", "PIN_END"]
-
-                x_s  = [ 0, median(vol_pinmap.loc[:, "V1"]["x"].tolist()), median(vol_pinmap.loc[:, "V2"]["x"].tolist()) ]
-                x_s += [ int((median(vol_pinmap.loc[:, "V2"]["x"].tolist()) + int(search_map[cols[4], "x"].median())) / 2) ]
-                x_s += [ int(search_map[col, "x"].median()) for col in cols[4:9] ]
-                x_s += [ breadboard_image_center[0]/2 - 1 ]
-
-                # 0 부터 A 전까지 범위는 어디에 속할까? 
-                # 결국 전압핀맵...
-
-                x_s = np.array(x_s, np.uint32)
-                idx = np.array(np.where((x_s > start_[0]) & (x_s < end_[0]))[0])
-                cols = np.array(cols, np.str0)
-
-            x_res = cols[idx]
-
-            if 'V1' not in x_res and 'V2' not in x_res and 'V3' not in x_res and 'V4' not in x_res:
-                if len(x_res):
-                    cols = cols[idx].tolist()
-
-                    rows = np.arange(30, dtype=np.uint32)
-                    y_s = [PADDING]
-                    y_s += search_map[cols[0], "y"].tolist()
-
-                    y_s = np.array(y_s, np.uint32)
-                    idx = np.where((y_s > start_[1]) & (y_s < end_[1]))[0]
-                    cols = np.array(idx, np.str0).tolist()
-                    
-                    table_idx = [x + r for x in x_res if x != "PIN_END" and x != "PIN_START" for r in cols ] 
-                    print(table_idx)
-
-                    # # border 만들고 여기다 drawing
-                    # for x_border in x_s_border:
-                    #     x_border = x_border - start_[0]
-                    #     cv2.line(pad_area, (x_border, 0), (x_border, 350), (255, 10, 10), 5)
-
-                    # for y_border in y_s_border:
-                    #     y_border = y_border - start_[1]
-                    #     cv2.line(pad_area, (0, y_border), (350, y_border), (53, 100, 20), 5)
-            else:
-                if len(x_res):
-                    cols = cols[idx].tolist()
-
-                    search_map = vol_pinmap.loc[:, cols[0]]
-
-                    rows = np.arange(25, dtype=np.uint32)
-                    y_s = [ PADDING ]
-                    y_s += search_map["y"].tolist()
-
-                    y_s = np.array(y_s, np.uint32)
-                    idx = np.where((y_s > start_[1]) & (y_s < end_[1]))[0]
-                    cols = np.array(idx, np.str0).tolist()
-
-                    table_idx = [x + r for x in x_res if x != "PIN_END" and x != "PIN_START" for r in cols ] 
-                    print(table_idx)
-
-
+            table_idx = findCandidateCoords(start_, end_, body_pinmap, vol_pinmap)
             '''
                 영역안에 들어있는 후보핀 체크 코드 끝
             '''
 
+            for pin in table_idx:
+                if "V" in pin:
+                    row = int(pin[2]) - 1
+                    col = str(pin[:2])
+
+                else:
+                    row = int(pin[1:]) - 1
+                    col = pin[0]
+
+                print(row, col)
+
+                getXY = (lambda df: (
+                    df.xs(row)[col]['x'] - start_[0], 
+                    df.xs(row)[col]['y'] - start_[1]))
+
+                if "V" in col:
+                    x, y = getXY(vol_pinmap)
+                else:
+                    x, y = getXY(body_pinmap)
+
+                cv2.circle(area, (x - PADDING, y - PADDING), 5, (255, 0, 0), 10)
+                # print(pin)
+            
+            cv2.imshow(f"LineEnd{i}", area)
+            cv2.imwrite(f"LineEnd{i}.jpg", area)
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
             area = cv2.cvtColor(area, cv2.COLOR_BGR2GRAY)
+            
             _, area = cv2.threshold(area, -1, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV)
-            area = cv2.morphologyEx(area, cv2.MORPH_OPEN, kernel, iterations=7)
+            area = cv2.morphologyEx(area, cv2.MORPH_CLOSE, kernel, iterations=7)
 
             ''' 클러스터링 시작 '''
             dbsc = DBSCAN(eps=1, min_samples=5, metric = 'euclidean', algorithm ='auto')
@@ -329,8 +351,10 @@ if __name__ == "__main__":
 
             cv2.imshow(f"threshold_origin_{i}", area)
             cv2.imshow(f"segmentation_{i}", mask_img)
+            cv2.imwrite(f"threshold_origin_{i}.jpg", area)
+            cv2.imwrite(f"segmentation_{i}.jpg", mask_img)
             ''' 클러스터링 끝 '''
           
-    # cv2.imshow("res", target)
+    cv2.imshow("res", target)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
