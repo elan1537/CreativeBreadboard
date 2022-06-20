@@ -88,6 +88,7 @@ export default {
       img: "data:image/png;base64,",
       circuit: "data:image/png;base64,",
       circuit_analysis: null,
+      detected_components: null,
     };
   },
   created() {
@@ -95,16 +96,7 @@ export default {
       this.img += localStorage.img;
       this.circuit += localStorage.circuit_img;
       this.circuit_analysis = JSON.parse(localStorage.circuit_analysis);
-      console.log(this.circuit_analysis);
-    } else {
-      let data = JSON.parse(JSON.stringify(this.$route.query)).result_image;
-
-      if (data) {
-        this.img += data;
-      } else {
-        alert("먼저 회로 사진을 업로드 해주세요");
-        location.href = "/upload";
-      }
+      this.detected_components = JSON.parse(localStorage.detected_components);
     }
   },
 };

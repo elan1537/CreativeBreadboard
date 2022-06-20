@@ -115,22 +115,23 @@ export default {
             data: data,
           })
             .then((response) => {
-              console.log(response.data);
               this.isSuccess = true;
               localStorage.img = response.data.result_image;
               localStorage.origin_img = response.data.origin_img;
               localStorage.circuit_img = response.data.circuit;
 
-              console.log(response.data.area_points);
+              let detected_components = response.data.detected_components;
+              let resistor_body = detected_components.resistor_body;
 
-              Object.keys(response.data.area_points).map((key) => {
-                let row = response.data.area_points[key];
-                row.cbRGB = [
+              Object.keys(resistor_body).map((key) => {
+                resistor_body[key].cbRGB = [
                   parseInt(Math.random() * 255),
                   parseInt(Math.random() * 255),
                   parseInt(Math.random() * 255),
                 ];
               });
+
+              detected_components.resistor_body = resistor_body;
 
               localStorage.area_points = JSON.stringify(
                 response.data.area_points
@@ -138,16 +139,11 @@ export default {
               localStorage.circuit_analysis = JSON.stringify(
                 response.data.circuit_analysis
               );
-              localStorage.detected_components = JSON.stringify(
-                response.data.detected_components
-              );
-
+              localStorage.detected_components =
+                JSON.stringify(detected_components);
               localStorage.scale = response.data.scale;
 
-              this.$router.push({
-                name: "Result",
-                query: response.data,
-              });
+              this.$router.push("result");
             })
             .catch((error) => console.log(error));
           this.isSuccess = false;

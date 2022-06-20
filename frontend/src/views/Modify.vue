@@ -31,7 +31,6 @@
                     class="btn btn-primary"
                     data-bs-toggle="modal"
                     data-bs-target="#exampleModal2"
-                    @click="setResistorArea"
                   >
                     modify
                   </button>
@@ -79,7 +78,7 @@
                             type="button"
                             class="btn btn-primary"
                             data-bs-dismiss="modal"
-                            @click="onResistorAreaSetButton"
+                            @click="setResistorArea"
                           >
                             Save changes
                           </button>
@@ -115,7 +114,6 @@
                     class="btn btn-primary"
                     data-bs-toggle="modal"
                     data-bs-target="#exampleModal"
-                    @click="setResistorValue"
                   >
                     modify
                   </button>
@@ -201,7 +199,14 @@ export default {
   component: { CardBody, ImageModify },
   data() {
     return {
-      circuit: "",
+      circuit: [
+        [{ name: "Resistor", value: 1500 }],
+        [
+          { name: "Resistor", value: 2000 },
+          { name: "Resistor", value: 340 },
+        ],
+        [{ name: "Resistor", value: 500 }],
+      ],
       uploaded_img: "",
       title_1: "저항영역 수정하기",
       title_2: "저항값 수정하기",
@@ -220,11 +225,14 @@ export default {
       finalWidth: null,
       finalHeight: null,
       isSetResistorArea: false,
+      detected_components: null,
     };
   },
   created() {
     if (localStorage.circuit_img) {
       this.circuit_img = "data:image/png;base64," + localStorage.circuit_img;
+      this.detected_components = JSON.parse(localStorage.detected_components);
+      this.area_points = this.detected_components.resistor_body;
     } else {
       axios({
         url: "/draw",
@@ -232,20 +240,21 @@ export default {
         headers: { "Content-Type": "multipart/form-data" },
       }).then((response) => {
         let img_data = response.data["circuit"];
-
         localStorage.circuit_img = img_data;
-        this.circuit_img += img_data;
+        this.circuit_img = img_data;
       });
     }
 
     axios({
-      url: "/resistor",
+      url: "http://localhost:3000/resistor",
       method: "get",
       headers: {
         "Content-Type": "application/json",
       },
     }).then((response) => {
       const response_data = response.data.data;
+
+      console.log("data", response_data);
       let temp_arr = [];
       for (let i = 0; i < response_data.length; i++) {
         for (let j = 0; j < response_data[i].length; j++) {
@@ -278,11 +287,39 @@ export default {
         this.area_points[key] = row;
       });
 
-      localStorage.area_points = JSON.stringify(this.area_points);
       let temp = JSON.parse(localStorage.detected_components);
       temp.resistor_body = this.area_points;
 
       localStorage.detected_components = JSON.stringify(temp);
+
+      axios({
+        method: "post",
+        url: "/area",
+        data: JSON.stringify(this.temp_area_points),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(() => {
+        axios({
+          url: "/draw",
+          method: "get",
+          headers: { "Content-Type": "multipart/form-data" },
+        }).then((response) => {
+          let img_data = "data:image/png;base64," + response.data["circuit"];
+          localStorage.circuit_img = response.data["circuit"];
+          this.circuit_img = img_data;
+          axios({
+            url: "/calc",
+            method: "get",
+            headers: { "Content-Type": "application/json" },
+          }).then((response) => {
+            localStorage.circuit_analysis = JSON.stringify(
+              response.data.circuit_analysis
+            );
+            this.temp_area_points = {};
+          });
+        });
+      });
     },
     setResistorValue(event, name) {
       this.circuit.map((row) => {
@@ -294,7 +331,7 @@ export default {
     onSaveButton() {
       axios({
         method: "post",
-        url: "/resistor",
+        url: "http://localhost:3000/resistor",
         headers: {
           "Content-Type": "application/json",
         },
@@ -324,31 +361,27 @@ export default {
         });
       });
     },
-    onResistorAreaSetButton() {
-      Object.keys(this.temp_area_points).map((key) => {
-        let row = this.temp_area_points[key];
-        this.area_points[key] = row;
-        // localStorage.area_points[key] = row;
-      });
-
-      this.temp_area_points = {};
-    },
     onImageLoad() {
       let img = new Image();
       img.src = this.uploaded_img;
       this.scale = localStorage.scale;
-      this.area_points = JSON.parse(localStorage.area_points);
 
       img.onload = () => {
         let width_size = parseInt(img.width * this.scale);
         let height_size = parseInt(img.height * this.scale);
+        let resistor_area = this.detected_components["resistor_body"];
+
+        if (Object.keys(resistor_area).length === 0) return;
+
         this.img_tag.width = width_size + 2;
         this.img_tag.height = height_size + 2;
         this.canvas.width = width_size;
         this.canvas.height = height_size;
 
-        Object.keys(this.area_points).forEach((key) => {
-          let row = this.area_points[key];
+        // console.log(Object.keys(resistor_area));
+
+        Object.keys(resistor_area).forEach((key) => {
+          let row = resistor_area[key];
 
           let [xmin, ymin, xmax, ymax] = [
             row.xmin * this.scale,
