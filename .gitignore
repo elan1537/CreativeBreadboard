@@ -4,6 +4,8 @@ node_modules
 *.jpg
 *.jpeg
 *.JPG
+*.h5
+*.pt
 
 test_code
 images
