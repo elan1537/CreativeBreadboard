@@ -93,7 +93,7 @@ export default {
   },
   created() {
     if (localStorage.img) {
-      this.img += localStorage.img;
+      this.img += localStorage.canvas_img;
       this.circuit += localStorage.circuit_img;
       this.circuit_analysis = JSON.parse(localStorage.circuit_analysis);
       this.detected_components = JSON.parse(localStorage.detected_components);

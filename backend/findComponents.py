@@ -156,7 +156,7 @@ def rectArea(df):
 
 def processDataFrame(origin_data, column_name, confidence=0.5):
     df = origin_data[(origin_data["name"] == column_name) & (origin_data["confidence"] > confidence)].copy()
-    print("is df has data?", len(df) == 0)
+    print("is df has data?", len(df) != 0)
 
     df['area']      = df.apply(rectArea, axis=1)
     df['center_x']  = df.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
@@ -176,10 +176,12 @@ def checkLinearea(target, base_point):
 
     detect_area = pd.DataFrame(linearea_detect_model(target).pandas().xyxy[0])
 
+    print("checkLinearea", len(detect_area))
+
     if detect_area.empty:
         return target, "{}"
 
-    line_area = processDataFrame(detect_area, "line-area", 0.7)
+    line_area = processDataFrame(detect_area, "line-area", 0.5)
 
     r = int(random.random() * 255)
     g = int(random.random() * 255)
@@ -216,6 +218,8 @@ def checkLineEndArea(target, base_point):
         lineendarea_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_LINEAREA_PATH)
 
     detect_area = pd.DataFrame(lineendarea_detect_model(target).pandas().xyxy[0])
+
+    print("checkLineEndArea", len(detect_area))
 
     line_end_area = processDataFrame(detect_area, "line-endpoint", 0.5)
 
@@ -256,7 +260,9 @@ def checkResistorArea(target, base_point):
 
     detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
 
-    resistor_area = processDataFrame(detect_area, "resistor-area", 0.6)
+    print("checkResistorArea", len(detect_area))
+
+    resistor_area = processDataFrame(detect_area, "resistor-area", 0.5)
 
     r = int(random.random() * 255)
     g = int(random.random() * 255)
@@ -294,7 +300,9 @@ def checkResistorBody(target, base_point):
 
     detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
 
-    resistor_body = processDataFrame(detect_area, "resistor-body", 0.7)
+    print("checkResistorBody", len(detect_area))
+
+    resistor_body = processDataFrame(detect_area, "resistor-body", 0.5)
 
     r = int(random.random() * 255)
     g = int(random.random() * 255)
@@ -401,13 +409,16 @@ def imgNormalizing(src, scale_to):
     mean = np.mean(img, axis=(0, 1, 2, 3))
     std = np.std(img, axis=(0, 1, 2, 3))
 
-    img = (img-mean)/(std + 1e-7)
+    img = (img-mean)/(std + 1e-5)
     return img
 
 def getXYPinCoords(model, src):
     if model:
         c = list(model.predict(src)[0])
         return c
+    else:
+        print("nomodel")
+        return [0, 0]
 
 def getPinCoords(search_map, candidates, coord, area_start):
     distance = 1000000

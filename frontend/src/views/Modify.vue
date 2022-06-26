@@ -209,7 +209,7 @@ export default {
       ],
       uploaded_img: "",
       title_1: "저항영역 수정하기",
-      title_2: "저항값 수정하기",
+      title_2: "저항값 입력하기",
       scale: null,
       canvas: null,
       context: null,
@@ -226,10 +226,30 @@ export default {
       finalHeight: null,
       isSetResistorArea: false,
       detected_components: null,
+      components: null,
     };
   },
   created() {
+    console.log("Created");
+
+    let jsonObj = this.$route.query;
+    console.log(jsonObj.components);
+    console.log(jsonObj === undefined);
+    if (jsonObj !== undefined) {
+      if (jsonObj.components !== undefined) {
+        localStorage.components = jsonObj.components;
+      }
+    }
+
     if (localStorage.circuit_img) {
+      axios({
+        url: "http://localhost:3000/warpedImg",
+        method: "get",
+        headers: { "Content-Type": "application/json" },
+      }).then((response) => {
+        let img_data = response.data["img"];
+        this.uploaded_img = "data:image/jpg;base64," + img_data;
+      });
       this.circuit_img = "data:image/png;base64," + localStorage.circuit_img;
       this.detected_components = JSON.parse(localStorage.detected_components);
       this.area_points = this.detected_components.resistor_body;
@@ -253,8 +273,6 @@ export default {
       },
     }).then((response) => {
       const response_data = response.data.data;
-
-      console.log("data", response_data);
       let temp_arr = [];
       for (let i = 0; i < response_data.length; i++) {
         for (let j = 0; j < response_data[i].length; j++) {
@@ -268,7 +286,7 @@ export default {
     window.addEventListener("mouseup", this.stopDrag);
     window.addEventListener("keydown", this.onKeydown);
 
-    this.uploaded_img = "data:image/png;base64," + localStorage.origin_img;
+    this.uploaded_img = this.origin_img;
     this.img_tag = this.$refs.imageLayer;
     this.canvas = this.$refs.canvas;
     this.context = this.canvas.getContext("2d");
@@ -362,6 +380,7 @@ export default {
       });
     },
     onImageLoad() {
+      console.log("onImageLoad");
       let img = new Image();
       img.src = this.uploaded_img;
       this.scale = localStorage.scale;
@@ -378,7 +397,54 @@ export default {
         this.canvas.width = width_size;
         this.canvas.height = height_size;
 
-        // console.log(Object.keys(resistor_area));
+        let components = JSON.parse(localStorage.components);
+        // Resistor
+        Object.keys(components["Resistor"]).forEach((key) => {
+          let row = components["Resistor"][key][0];
+          let start_coord = row.start_coord;
+          let end_coord = row.end_coord;
+          console.log(start_coord[0] * this.scale, start_coord[1] * this.scale);
+          this.context.beginPath();
+          this.context.fillStyle = "blue";
+          this.context.font = "20px Arial";
+          this.context.fillText(
+            row.start_pin,
+            start_coord[0] * this.scale,
+            start_coord[1] * this.scale - 20
+          );
+          this.context.arc(
+            start_coord[0] * this.scale,
+            start_coord[1] * this.scale,
+            5,
+            0,
+            Math.PI * 2,
+            true
+          );
+          this.context.fill();
+          this.context.closePath();
+          this.context.beginPath();
+          this.context.fillStyle = "blue";
+          this.context.arc(
+            end_coord[0] * this.scale,
+            end_coord[1] * this.scale,
+            5,
+            0,
+            Math.PI * 2,
+            true
+          );
+          this.context.font = "20px Arial";
+          this.context.fillText(
+            row.end_pin,
+            end_coord[0] * this.scale,
+            end_coord[1] * this.scale + 20
+          );
+          this.context.fill();
+          this.context.closePath();
+        });
+
+        Object.keys(components["Line"]).forEach((key) => {
+          console.log(key);
+        });
 
         Object.keys(resistor_area).forEach((key) => {
           let row = resistor_area[key];
