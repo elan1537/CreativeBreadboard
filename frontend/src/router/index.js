@@ -3,8 +3,7 @@ import Main from "../views/Main.vue"
 import Modify from "../views/Modify.vue"
 import Result from "../views/Result.vue"
 import Upload from "../views/Upload.vue"
-import Test from "../views/Test.vue"
-import ModifyTest  from "../views/ModifyTest.vue"
+import Check from "../views/Check.vue"
 
 const routes = [
     {
@@ -28,14 +27,9 @@ const routes = [
         component: Result
     },
     {
-        path: '/test',
-        name: "Test",
-        component: Test
-    },
-    {
-        path: '/modifytest',
-        name: "ModifyTest",
-        component: ModifyTest
+        path: "/check",
+        name: "Check",
+        component: Check
     }
 ]
 

@@ -27,8 +27,7 @@ find_pincoords_resi_model = None
 find_pincoords_line_model = None
 
 V = 5
-PADDING = 0
-
+# PADDING = 0
 
 SAVE_PATH = "./static/uploads"
 PROJECT_PATH = "/Users/se_park/Library/Mobile Documents/com~apple~CloudDocs/2022 Soongsil/1. CS/CreativeBreadboard/images/Circuits"
@@ -47,6 +46,153 @@ app.permanent_session_lifetime = datetime.timedelta(hours=4)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 FILE_IMAGE = None
+
+def set_line_component(line_area_pd, line_endarea_pd, table, search_map, base_point, target_image, canvas_image):
+        temp = {
+            "Line": {},
+            "Unknown": []
+        }
+
+        for endAreaIdx in table.keys():
+            endarea = line_endarea_pd.iloc[endAreaIdx]
+            expand_to = 350
+
+            endAreaminPoint =[round(endarea.xmin)-15, round(endarea.ymin)-15]
+            endAreamaxPoint = [round(endarea.xmax)+15, round(endarea.ymax)+15]
+
+            # 시작점이 <0이 나올 수가 있음..
+            if endAreaminPoint[0] < 0:
+                endAreaminPoint[0] = 0
+            
+            if endAreaminPoint[1] < 0:
+                endAreaminPoint[1] = 0
+            
+            cv2.putText(canvas_image, f"endarea#{endAreaIdx}", (endAreaminPoint[0], endAreaminPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+
+            area_start, area_end, area = area_padding(target_image, endAreaminPoint, endAreamaxPoint, base_point[0], base_point[2], 0, False)
+            
+            table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
+            normalized = imgNormalizing(area, scale_to=227)
+
+            coords = getXYPinCoords(find_pincoords_line_model, normalized)
+
+            pt1 = round(coords[0]), round(coords[1])
+            pt1 = translate(pt1, 227, expand_to, area_start)
+            x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)    
+
+            toLineArea = table[endAreaIdx]
+            linearea = line_area_pd.iloc[toLineArea]
+
+            if temp["Line"].get(f"L{toLineArea}") is not None:
+                if temp["Line"][f"L{toLineArea}"].get("start"):
+                    temp["Line"][f"L{toLineArea}"]["end"] = pin1
+                    temp["Line"][f"L{toLineArea}"]["end_coord"] = [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]]
+                    temp["Line"][f"L{toLineArea}"]["end_endAreaStart"] = endAreaminPoint
+                    temp["Line"][f"L{toLineArea}"]["end_endAreaEnd"] = endAreamaxPoint
+
+                else:
+                    temp["Line"][f"L{toLineArea}"]["start"] = pin1
+                    temp["Line"][f"L{toLineArea}"]["start_coord"] = [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]]
+                    temp["Line"][f"L{toLineArea}"]["start_endAreaStart"] = endAreaminPoint
+                    temp["Line"][f"L{toLineArea}"]["start_endAreaEnd"] = endAreamaxPoint
+ 
+            elif temp["Line"].get(f"linearea#{toLineArea}") is None:
+                line_component = {
+                    "class": "Line",
+                    "name": f"L{toLineArea}",
+                    "areaStart": [round(linearea.xmin), round(linearea.ymin)],
+                    "areaEnd": [round(linearea.xmax), round(linearea.ymax)]
+                }
+
+                if "V1" in pin1 or "V3" in pin1:
+                    line_component["end"] = pin1
+                    line_component["end_coord"] = [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]]
+                    line_component["end_endAreaStart"] = endAreaminPoint
+                    line_component["end_endAreaEnd"] = endAreamaxPoint
+
+                elif "V2" in pin1 or "V4" in pin1:
+                    line_component["start"] = pin1
+                    line_component["start_coord"] = [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]]
+                    line_component["start_endAreaStart"] = endAreaminPoint
+                    line_component["start_endAreaEnd"] = endAreamaxPoint
+
+                else:
+                    line_component["start"] = pin1
+                    line_component["start_coord"] = [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]]
+                    line_component["start_endAreaStart"] = endAreaminPoint
+                    line_component["start_endAreaEnd"] = endAreamaxPoint
+
+                temp["Line"][f"L{toLineArea}"] = line_component
+
+            else:
+                temp["Unknown"].append({
+                    "pin": pin1,
+                    "coord": [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]],
+                    "areaStart": endAreaminPoint,
+                    'areaEnd': endAreamaxPoint
+                })
+
+
+            cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+            cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (255, 0, 255), cv2.FILLED)
+
+        return temp
+
+def set_resistor_component(resistor_area_pd, search_map, base_point, target_image, canvas_image):
+        temp = []
+        r = int(random.random() * 255)
+        g = int(random.random() * 255)
+        b = int(random.random() * 255)
+
+        for i in range(len(resistor_area_pd)):
+            data = resistor_area_pd.iloc[i]
+
+            if len(data) == 0:
+                continue
+
+            minPoint = round(data.xmin)-15, round(data.ymin)-15
+            maxPoint = round(data.xmax)+15, round(data.ymax)+15
+
+            expand_to = max([maxPoint[0] - minPoint[0], maxPoint[1] - minPoint[1]])
+            area_start, area_end, area = area_padding(target_image, minPoint, maxPoint, base_point[0], base_point[2], expand_to, True)
+
+            cv2.rectangle(canvas_image, minPoint, maxPoint, (b, g, r), 10)
+
+            table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
+
+            normalized = imgNormalizing(area, scale_to=300)
+            coords = getXYPinCoords(find_pincoords_resi_model, normalized)
+
+            pt1 = round(coords[0]), round(coords[1])
+            pt2 = round(coords[2]), round(coords[3])
+
+            pt1 = translate(pt1, 300, expand_to, area_start)
+            pt2 = translate(pt2, 300, expand_to, area_start)
+
+            x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)
+            x2, y2, pin2 = getPinCoords(search_map, table_idx, pt2, area_start)
+
+            temp.append(
+            {
+                "class": "Resistor", 
+                "name": f"R{i}", 
+                "start": pin1, 
+                "end": pin2, 
+                "start_coord": [x1 + area_start[0], y1 + area_start[1]], 
+                "end_coord": [x2 + area_start[0], y2 + area_start[1]], 
+                "value": 100,
+                "areaStart": minPoint,
+                "areaEnd": maxPoint
+            })
+
+            # 이미지에 표시
+            cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
+            cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (0, 0, 255), cv2.FILLED)
+            cv2.putText(canvas_image, pin2, (x2 + area_start[0], y2 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
+            cv2.circle(canvas_image, (x2 + area_start[0], y2 + area_start[1]), 20, (20, 0, 255), cv2.FILLED)
+            # 끝
+
+        return temp
 
 @app.route("/")
 def main():
@@ -109,6 +255,7 @@ def draw():
 def image():
     if request.method == 'POST':
         global FILE_IMAGE, V
+        PADDING = 0
         if request.get_json() != None:
             target_image = cv2.imread("../IMG_5633.JPG", cv2.IMREAD_COLOR)
             points = [[93,29],[99,871],[648,865],[648,27]]
@@ -147,10 +294,18 @@ def image():
         jpg_as_text = base64.b64encode(buffer).decode()
         res = requests.post("http://localhost:3000/detect", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text, 'scale': scale}))
     
-        img_data = res.json()
-        print(img_data.keys())
+        components = res.json()
+        print(type(components))
 
-        return jsonify(img_data)
+        result_data = {
+            "transformedImg": jpg_as_text,
+            "basePoint": base_point.tolist(),
+            "voltage": V,
+            "scale": 0.25,
+            "components": components["components"]
+        }
+
+        return jsonify(result_data)
 
 @app.route("/points", methods=['POST'])
 def points():
@@ -174,200 +329,13 @@ def calc():
         }
     })
 
-@app.route("/detect", methods=['POST'])
-def detect():
-    # 이미지 프로세싱
-    global circuit_component_data, vol_pinmap, body_pinmap, start_point
-
-    init()
-
-    data = json.loads(request.get_json())
-    pts = data['pts']
-    img_res = data['img_res']
-    scale = data['scale']
-    jpg_original = base64.b64decode(img_res)
-    img_arr = np.frombuffer(jpg_original, np.uint8)
-    target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-    canvas_image = target_image.copy()
-
-    cv2.imwrite("./target_img.jpg", canvas_image)
-    
-    get_resistor_area_picking_image, resistor_area_points, resistor_area_pd = checkResistorArea(target_image, pts)
-    get_resistor_body_picking_image, resistor_body_points, resistor_body_pd = checkResistorBody(target_image, pts)
-    get_linearea_picking_image,      linearea_points,      line_area_pd = checkLinearea(target_image, pts)
-    get_lineendarea_picking_image, lineendarea_points, line_endarea_pd = checkLineEndArea(target_image, pts)
-
-    resistor_body_obj = json.loads(resistor_body_points)
-    resistor_area_obj = json.loads(resistor_area_points)
-    linearea_obj = json.loads(linearea_points)
-
-    base_point = np.array(pts, np.float32)
-    base_point = base_point.astype(np.float32)
-    transform_mtrx = cv2.getPerspectiveTransform(start_point, base_point)
-
-    initializePinmaps(body_pinmap, vol_pinmap, transform_mtrx)
-    search_map = pd.concat([vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1)
-
-
-    r = int(random.random() * 255)
-    g = int(random.random() * 255)
-    b = int(random.random() * 255)
-
-    components = {
-        "Line": {},
-        "Resistor": {}
-    }
-
-    temp = []
-
-    for i in range(len(resistor_area_pd)):
-        data = resistor_area_pd.iloc[i]
-
-        if len(data) == 0:
-            continue
-
-        minPoint = round(data.xmin)-15, round(data.ymin)-15
-        maxPoint = round(data.xmax)+15, round(data.ymax)+15
-
-        expand_to = max([maxPoint[0] - minPoint[0], maxPoint[1] - minPoint[1]])
-        area_start, area_end, area = area_padding(target_image, minPoint, maxPoint, base_point[0], base_point[2], expand_to, True)
-
-        cv2.rectangle(canvas_image, minPoint, maxPoint, (b, g, r), 10)
-
-        table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
-
-        normalized = imgNormalizing(area, scale_to=300)
-        coords = getXYPinCoords(find_pincoords_resi_model, normalized)
-
-        pt1 = round(coords[0]), round(coords[1])
-        pt2 = round(coords[2]), round(coords[3])
-
-        pt1 = translate(pt1, 300, expand_to, area_start)
-        pt2 = translate(pt2, 300, expand_to, area_start)
-
-        x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)
-        x2, y2, pin2 = getPinCoords(search_map, table_idx, pt2, area_start)
-
-        res_comp = [
-            {"class": "Resistor", "name": f"R{i}", "start": pin1, "end": pin2, "start_coord": [x1 + area_start[0], y1 + area_start[1]], "end_coord": [x2 + area_start[0], y2 + area_start[1]]},
-        ]
-
-        
-
-        components["Resistor"][f"resarea#{i}"] = res_comp
-        temp.append({"class": "Resistor", "name": f"R{i}", "start": pin1, "end": pin2, "start_coord": [x1 + area_start[0], y1 + area_start[1]], "end_coord": [x2 + area_start[0], y2 + area_start[1]], "value": 100})
-
-        cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
-        cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (0, 0, 255), cv2.FILLED)
-        cv2.putText(canvas_image, pin2, (x2 + area_start[0], y2 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
-        cv2.circle(canvas_image, (x2 + area_start[0], y2 + area_start[1]), 20, (20, 0, 255), cv2.FILLED)
-
-    cv2.imwrite(f"resistor_area.jpg", canvas_image)
-
-    print("find line_endarea")
-
-
-    for i in range(len(line_area_pd)):
-        linearea = line_area_pd.iloc[i]
-        components[f"linearea#{i}"] = []
-
-    table = line_contains_table(line_area_pd, line_endarea_pd)
-
-    print(table)
-    components['unknown'] = []
-
-    for endAreaIdx in table.keys():
-        r = int(random.random() * 255)
-        g = int(random.random() * 255)
-        b = int(random.random() * 255)
-
-        endarea = line_endarea_pd.iloc[endAreaIdx]
-
-        endAreaminPoint = round(endarea.xmin)-15, round(endarea.ymin)-15
-        endAreamaxPoint = round(endarea.xmax)+15, round(endarea.ymax)+15
-        
-        target_image.copy()
-        cv2.putText(canvas_image, f"endarea#{endAreaIdx}", (endAreaminPoint[0], endAreaminPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
-
-        area_start, area_end, area = area_padding(target_image, endAreaminPoint, endAreamaxPoint, base_point[0], base_point[2], 0, False)
-        cv2.imwrite(f"endarea#{endAreaIdx}.jpg", area)
-        print(area.shape)
-        
-        table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
-        normalized = imgNormalizing(area, scale_to=227)
-
-        coords = getXYPinCoords(find_pincoords_line_model, normalized)
-
-        pt1 = round(coords[0]), round(coords[1])
-        pt1 = translate(pt1, 227, expand_to, area_start)
-        x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)
-        
-        line_end_comp = {"name": f"lineend#{endAreaIdx}", "coord": [x1 + endAreaminPoint[0], y1 + endAreaminPoint[1]], "pin": pin1}
-
-        toLineArea = table[endAreaIdx]
-
-        if components["Line"].get(f"linearea#{toLineArea}") is None:
-            components["unknown"].append(line_end_comp)
-        else:
-            components["Line"][f"linearea#{toLineArea}"].append(line_end_comp)
-
-        cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
-        cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (255, 0, 255), cv2.FILLED)
-
+@app.route("/check", methods=['GET', 'POST'])
+def check():
     pprint.pprint(components)
-    for lineAreaIdx in table.values():
-        r = int(random.random() * 255)
-        g = int(random.random() * 255)
-        b = int(random.random() * 255)
-
-        linearea = line_area_pd.iloc[lineAreaIdx]
-
-        lineareaMinPoint = round(linearea.xmin) - 30, round(linearea.ymin) - 30
-        lineareaMaxPoint = round(linearea.xmax) + 30, round(linearea.ymax) + 30
-    
-        cv2.putText(canvas_image, f"linearea#{lineAreaIdx}", (lineareaMinPoint[0], lineareaMinPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
-        cv2.rectangle(canvas_image, lineareaMinPoint, lineareaMaxPoint, (b, g, r), 10)
-
-        
-    cv2.imwrite("target_img.jpg", target_image)
-    cv2.imwrite("canvas_image.jpg", canvas_image)
-
-    resistor_body_key = list(resistor_body_obj.keys())
-    resistor_area_key = list(resistor_area_obj.keys())
-    resistor_count = len(resistor_body_obj)
-
-    print(components)
-    res_count = len(components["Resistor"])
-
-    print(temp)
 
     # Circuit-38.220428
-    detected_components_2 = [ # Circuit-38.220428
-        {"name": "Line", "start": "F05", "end": "E13", "id": 0, "value": 0},
-        {"name": "Line", "start": "E18", "end": "E29", "id": 1, "value": 0},
-        {"name": "R1", "value": 100, "start": "V405", "end": "J05", "id": 0},
-        {"name": "R2", "value": 100, "start": "C13", "end": "C18", "id": 1},
-        {"name": "R3", "value": 100, "start": "A13", "end": "A18", "id": 2},
-        {"name": "R4", "value": 100, "start": "B29", "end": "V124", "id": 3},
-    ]
 
-    # detected_components_2 = [ # Circuit-38.220428
-    #     {"name": "Line", "start": "F05", "end": "E13", "id": 0, "value": 0},
-    #     {"name": "Line", "start": "E18", "end": "E29", "id": 1, "value": 0},
-    #     {"name": "R1", "value": 100, "start": "F14", "end": "J05", "id": 0},
-    #     {"name": "R2", "value": 100, "start": "C13", "end": "C18", "id": 1},
-    #     {"name": "R3", "value": 100, "start": "A13", "end": "A18", "id": 2},
-    #     {"name": "R4", "value": 100, "start": "B29", "end": "V124", "id": 3},
-    #     {"name": "R4", "value": 100, "start": "B29", "end": "V124", "id": 4},
-    # ]
-
-    temp.append({"name": "Line", "start": "V213", "end": "F2", "id": 0, "value": 0, "class": "Line"})
-    temp.append({"name": "Line", "start": "F14", "end": "V325", "id": 1, "value": 0, "class": "Line"})
-    # cccc = pd.DataFrame(temp)
-
-    # print("cccc", cccc)
-    # circuit = findNetwork(cccc)
-    cps = pd.DataFrame(detected_components_2)
+    cps = pd.DataFrame(components)
     circuit = findNetwork(cps)
 
     print(circuit)
@@ -434,7 +402,6 @@ def detect():
     jpg_as_text = base64.b64encode(buffer).decode()
     dd = base64.b64encode(canvasBUffer).decode()
 
-
     return jsonify({
         "result_image": jpg_as_text,
         "circuit": base64.b64encode(drawDiagram(V, circuit_component_data)).decode(),
@@ -454,6 +421,117 @@ def detect():
         },
         "scale": scale
     })
+
+@app.route("/detect", methods=['POST'])
+def detect():
+    # 이미지 프로세싱
+    global circuit_component_data, vol_pinmap, body_pinmap, start_point
+
+    init()
+
+    data = json.loads(request.get_json())
+    pts = data['pts']
+    img_res = data['img_res']
+    scale = data['scale']
+    jpg_original = base64.b64decode(img_res)
+    img_arr = np.frombuffer(jpg_original, np.uint8)
+    target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+    canvas_image = target_image.copy()
+
+    cv2.imwrite("./target_img.jpg", canvas_image)
+    
+    _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image, pts)
+    _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image, pts)
+    _,      linearea_points,      line_area_pd = checkLinearea(target_image, pts)
+    _,   lineendarea_points, line_endarea_pd = checkLineEndArea(target_image, pts)
+
+    base_point = np.array(pts, np.float32)
+    base_point = base_point.astype(np.float32)
+    transform_mtrx = cv2.getPerspectiveTransform(start_point, base_point)
+
+    initializePinmaps(body_pinmap, vol_pinmap, transform_mtrx)
+    search_map = pd.concat([vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1)
+
+    print("resistor_area_pd:", len(resistor_area_pd))
+    print("resistor_body_pd:", len(resistor_body_pd))
+    print("line_area_pd:", len(line_area_pd))
+    print("line_endarea_pd:", len(line_endarea_pd))
+
+    components = {
+        "Resistor": [],
+        "Unknown": []
+    }
+
+    detected_resistor_components = set_resistor_component(resistor_area_pd, search_map, base_point, target_image, canvas_image)
+    components['Resistor'] = detected_resistor_components
+
+    cv2.imwrite("canvas_image.jpg", canvas_image)
+
+    if len(line_area_pd) > 0:
+        table = line_contains_table(line_area_pd, line_endarea_pd)
+
+        detected_line_components = set_line_component(line_area_pd, line_endarea_pd, table, search_map, base_point, target_image, canvas_image)
+        components["Line"] = detected_line_components["Line"]
+        components["Unknown"] = detected_line_components["Unknown"]
+
+        for lineAreaIdx in table.values():
+            r = int(random.random() * 255)
+            g = int(random.random() * 255)
+            b = int(random.random() * 255)
+
+            linearea = line_area_pd.iloc[lineAreaIdx]
+
+            lineareaMinPoint = round(linearea.xmin) - 30, round(linearea.ymin) - 30
+            lineareaMaxPoint = round(linearea.xmax) + 30, round(linearea.ymax) + 30
+        
+            cv2.putText(canvas_image, f"linearea#{lineAreaIdx}", (lineareaMinPoint[0], lineareaMinPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+            cv2.rectangle(canvas_image, lineareaMinPoint, lineareaMaxPoint, (b, g, r), 10)
+
+    elif len(line_endarea_pd) > 0:
+        for lineEndAreaIdx in range(len(line_endarea_pd)):
+            r = int(random.random() * 255)
+            g = int(random.random() * 255)
+            b = int(random.random() * 255)
+
+            linearea = line_endarea_pd.iloc[lineEndAreaIdx]
+
+            lineareaMinPoint = [round(linearea.xmin) - 30, round(linearea.ymin) - 30]
+            lineareaMaxPoint = [round(linearea.xmax) + 30, round(linearea.ymax) + 30]
+
+            if lineareaMinPoint[0] < 0:
+                lineareaMinPoint[0] = 0
+            if lineareaMinPoint[1] < 0:
+                lineareaMinPoint[1] = 0
+
+            expand_to = 350
+
+            area_start, area_end, area = area_padding(target_image, lineareaMinPoint, lineareaMaxPoint, base_point[0], base_point[2], expand_to, True)
+            table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
+            normalized = imgNormalizing(area, scale_to=227)
+
+            coords = getXYPinCoords(find_pincoords_line_model, normalized)
+
+            pt1 = round(coords[0]), round(coords[1])
+            pt1 = translate(pt1, 227, expand_to, area_start)
+            x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start) 
+
+            components["Unknown"].append({
+                "class": "LineEnd",
+                "name": f"LE{lineEndAreaIdx}",
+                "coord": [x1 + area_start[0], y1 + area_start[1]],
+                "pin": pin1
+            })
+        
+            cv2.putText(canvas_image, f"lineendarea#{lineEndAreaIdx}", (lineareaMinPoint[0], lineareaMinPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+            cv2.rectangle(canvas_image, lineareaMinPoint, lineareaMaxPoint, (b, g, r), 10)
+            cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+            cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (255, 0, 255), cv2.FILLED)
+
+        
+    cv2.imwrite("target_img.jpg", target_image)
+    cv2.imwrite("canvas_image.jpg", canvas_image)
+
+    return jsonify({"components": components})
 
 @app.route('/result', methods=["GET"])
 def result():
@@ -522,6 +600,8 @@ def init():
         start_point,                \
         find_pincoords_resi_model,  \
         find_pincoords_line_model
+    
+    PADDING = 150
 
     pinmap = json.load(open("static/data/pinmap.json"))
     pinmap_shape = pinmap["shape"]
@@ -538,7 +618,7 @@ def init():
 
     if find_pincoords_resi_model is None:
         print("resi 모델 생성")
-        find_pincoords_resi_model = tf.keras.models.load_model("../model/findCoordsResNet50.h5")
+        find_pincoords_resi_model = tf.keras.models.load_model("../model/ResNet152V2.h5")
     
     if find_pincoords_line_model is None:
         print("line 모델 생성")
@@ -561,9 +641,9 @@ def line_contains_table(line_area, line_endarea):
         for j in range(len(line_endarea)):
             endarea = line_endarea.iloc[j]
 
-            print(f"전선영역{i}와 전선연결부{j}와 비교 중")
+            # print(f"전선영역{i}와 전선연결부{j}와 비교 중")
 
-            print(f"{area.xmin} < {endarea.center_x} < {area.xmax} || {area.ymin} < {endarea.center_y} < {area.ymax}")
+            # print(f"{area.xmin} < {endarea.center_x} < {area.xmax} || {area.ymin} < {endarea.center_y} < {area.ymax}")
 
             # linearea 안에 포함된 lineend를 찾는다.
             if ((area.xmin < endarea.center_x) and (endarea.center_x < area.xmax)) and ((area.ymin < endarea.center_y) and (endarea.center_y < area.ymax)):            
@@ -608,5 +688,4 @@ def line_contains_table(line_area, line_endarea):
 
 
 if __name__ == "__main__":
-    init()
     app.run(debug=False, use_reloader=True, host='0.0.0.0', port=3000)

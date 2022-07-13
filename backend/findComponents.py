@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import pandas as pd
 import math
-from server import PADDING
 
 MODEL_RESISTORAREA_PATH = "../model/resistor-area.model.pt"
 MODEL_RESISTORBODY_PATH = "../model/resistor.body.pt"
@@ -13,6 +12,8 @@ MODEL_LINEENDAREA_PATH = "../model/line-endpoint.model.pt"
 
 BREADBOARD_COL_INDEX = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F', 'G', 'G', 'H', 'H', 'I', 'I', 'J', 'J']
 BREADBOARD_ROW_INDEX = range(30)
+
+PADDING = 150
 
 ''' 
     이미지 왜곡 수정 함수 
@@ -154,19 +155,21 @@ def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list
 def rectArea(df):
     return (df.xmax - df.xmin) * (df.ymax - df.ymin)
 
-def processDataFrame(origin_data, column_name, confidence=0.5):
+def processDataFrame(origin_data, column_name, confidence=0.1):
     df = origin_data[(origin_data["name"] == column_name) & (origin_data["confidence"] > confidence)].copy()
-    print("is df has data?", len(df) != 0)
 
-    df['area']      = df.apply(rectArea, axis=1)
-    df['center_x']  = df.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
-    df['center_y']  = df.apply(lambda row: int((row.ymax + row.ymin) / 2), axis=1)
-    df['length']    = df.apply(lambda row: int((row.xmax - row.xmin)), axis=1)
-    df['width']     = df.apply(lambda row: int((row.ymax - row.ymin)), axis=1)
-    df['distance_from_origin'] = df.apply(lambda row: int((row.xmin + row.ymin)), axis=1)
-    df = df.sort_values(by=['distance_from_origin'], ascending=True)
+    if len(df) > 0:
+        df['area']      = df.apply(rectArea, axis=1)
+        df['center_x']  = df.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
+        df['center_y']  = df.apply(lambda row: int((row.ymax + row.ymin) / 2), axis=1)
+        df['length']    = df.apply(lambda row: int((row.xmax - row.xmin)), axis=1)
+        df['width']     = df.apply(lambda row: int((row.ymax - row.ymin)), axis=1)
+        df['distance_from_origin'] = df.apply(lambda row: int((row.xmin + row.ymin)), axis=1)
+        df = df.sort_values(by=['distance_from_origin'], ascending=True)
 
-    return df
+        return df
+    else:
+        return pd.DataFrame({})
 
 def checkLinearea(target, base_point):
     global linearea_detect_model
@@ -178,37 +181,11 @@ def checkLinearea(target, base_point):
 
     print("checkLinearea", len(detect_area))
 
-    if detect_area.empty:
-        return target, "{}"
+    if len(detect_area) > 0:
+        line_area = processDataFrame(detect_area, "line-area", 0.5)
+    else:
+        line_area = {}
 
-    line_area = processDataFrame(detect_area, "line-area", 0.5)
-
-    r = int(random.random() * 255)
-    g = int(random.random() * 255)
-    b = int(random.random() * 255)
-
-    # for i in range(len(line_area)):
-    #     data = line_area.iloc[i]
-
-    #     result = None
-        
-    #     p = [int(data.xmin), int(data.ymin), int(data.xmax), int(data.ymax)]
-
-    #     cv2.rectangle(target, (p[0], p[1]), (p[2], p[3]), (b, g, r), 10)
-
-    #     resistor_area_from, resistor_area_to, area = area_padding(target, (p[0], p[1]), (p[2], p[3]), base_point[0], base_point[2], blank=False)
-
-    #     result = area.copy()
-
-    #     area = cv2.cvtColor(area, cv2.COLOR_BGR2GRAY)
-    #     _, area = cv2.threshold(area, 
-    #     -1, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
-    #     kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (5, 5))
-
-    #     area = cv2.morphologyEx(area, cv2.MORPH_ERODE, kernel, iterations=4)
-    #     cv2.rectangle(result, (0, 0), (p[2] - p[0], p[3] - p[1]), (0, 255, 0), 3)
-    
-    # cv2.imwrite(f"line_total_result.jpg", target)
     return target, line_area.transpose().to_json(), line_area
 
 def checkLineEndArea(target, base_point):
@@ -333,6 +310,7 @@ def checkResistorBody(target, base_point):
     return target, resistor_body.transpose().to_json(), resistor_body
 
 def findCandidateCoords(area_start, area_end, bodymap, volmap):
+    global PADDING
     search_map = None
     table_idx = []
 
@@ -399,6 +377,7 @@ def homocoordsToxy(v):
     return int(v[0][0]/v[0][2]), int(v[0][1]/v[0][2])
 
 def imgNormalizing(src, scale_to):
+    print(src.shape)
     img_yuv = cv2.cvtColor(src, cv2.COLOR_BGR2YUV)
     img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
     img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
@@ -421,11 +400,11 @@ def getXYPinCoords(model, src):
         return [0, 0]
 
 def getPinCoords(search_map, candidates, coord, area_start):
-    distance = 1000000
-    final_coord = []
-    pin_name = None
+    global PADDING
 
-    # print(candidates)
+    distance = 1000000
+    final_coord = [0, 0]
+    pin_name = -1
 
     for candidate in candidates:
         if "V" in candidate:
@@ -482,21 +461,23 @@ def translate(point, scale_to, expand_to, area_start):
     return homocoordsToxy(point.T)
 
 def initializePinmaps(body_pinmap, vol_pinmap, transform_mtrx):
-        for C in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
-            for R in range(30):
-                x, y = transform_pts(body_pinmap, transform_mtrx, C, R)
-                body_pinmap.xs(R)[C]['x'] = round(x) + PADDING
-                body_pinmap.xs(R)[C]['y'] = round(y) + PADDING
+    global PADDING
 
-                # cv2.circle(result, (body_pinmap.xs(R)[C]['x'] - PADDING, body_pinmap.xs(R)[C]['y'] - PADDING), 10, (0, 255, 0), cv2.FILLED)
+    for C in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+        for R in range(30):
+            x, y = transform_pts(body_pinmap, transform_mtrx, C, R)
+            body_pinmap.xs(R)[C]['x'] = round(x) + PADDING
+            body_pinmap.xs(R)[C]['y'] = round(y) + PADDING
 
-        for V in ['V1', 'V2', 'V3', 'V4']:
-            for R in range(25):
-                x, y = transform_pts(vol_pinmap, transform_mtrx, V, R)
-                vol_pinmap.xs(R)[V]['x'] = round(x) + PADDING
-                vol_pinmap.xs(R)[V]['y'] = round(y) + PADDING
+            # cv2.circle(result, (body_pinmap.xs(R)[C]['x'] - PADDING, body_pinmap.xs(R)[C]['y'] - PADDING), 10, (0, 255, 0), cv2.FILLED)
 
-                # cv2.circle(result, (vol_pinmap.xs(R)[V]['x'] - PADDING, vol_pinmap.xs(R)[V]['y'] - PADDING), 10, (0, 255, 255), cv2.FILLED)
+    for V in ['V1', 'V2', 'V3', 'V4']:
+        for R in range(25):
+            x, y = transform_pts(vol_pinmap, transform_mtrx, V, R)
+            vol_pinmap.xs(R)[V]['x'] = round(x) + PADDING
+            vol_pinmap.xs(R)[V]['y'] = round(y) + PADDING
+
+            # cv2.circle(result, (vol_pinmap.xs(R)[V]['x'] - PADDING, vol_pinmap.xs(R)[V]['y'] - PADDING), 10, (0, 255, 255), cv2.FILLED)
 
 
 def transform_pts(df, mtrx, col, row):

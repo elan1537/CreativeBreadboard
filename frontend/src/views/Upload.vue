@@ -96,47 +96,57 @@ export default {
       }).then((response) => {
         this.isSuccess = true;
 
-        let detected_components = response.data.detected_components;
-        let resistor_body = detected_components.resistor_body;
-
-        Object.keys(resistor_body).map((key) => {
-          resistor_body[key].cbRGB = [
-            parseInt(Math.random() * 255),
-            parseInt(Math.random() * 255),
-            parseInt(Math.random() * 255),
-          ];
-        });
-
-        localStorage.img = response.data.result_image;
-
-        localStorage.circuit_img = response.data.circuit;
-
-        detected_components.resistor_body = resistor_body;
-
-        let sendObj = {
-          img: response.data.result_image,
-          origin_img: response.data.warpedImg,
-          circuit_img: response.data.circuit_img,
-          area_points: JSON.stringify(response.data.area_points),
-          circuit_analysis: JSON.stringify(response.data.circuit_analysis),
-          detected_components: JSON.stringify(detected_components),
-          components: JSON.stringify(response.data.components),
-          scale: response.data.scale,
-        };
-
-        localStorage.area_points = JSON.stringify(response.data.area_points);
-        localStorage.circuit_analysis = JSON.stringify(
-          response.data.circuit_analysis
-        );
-        localStorage.canvas_img = response.data.canvasImage;
-
-        localStorage.detected_components = JSON.stringify(detected_components);
+        localStorage.transformedImg = response.data.transformedImg;
+        localStorage.components = JSON.stringify(response.data.components);
         localStorage.scale = response.data.scale;
+        localStorage.voltage = response.data.voltage;
+        localStorage.basePoint = JSON.stringify(response.data.basePoint);
 
         this.$router.push({
-          name: "Modify",
-          query: sendObj,
+          name: "Check",
         });
+
+        // let detected_components = response.data.detected_components;
+        // let resistor_body = detected_components.resistor_body;
+
+        // Object.keys(resistor_body).map((key) => {
+        //   resistor_body[key].cbRGB = [
+        //     parseInt(Math.random() * 255),
+        //     parseInt(Math.random() * 255),
+        //     parseInt(Math.random() * 255),
+        //   ];
+        // });
+
+        // localStorage.img = response.data.result_image;
+
+        // localStorage.circuit_img = response.data.circuit;
+
+        // detected_components.resistor_body = resistor_body;
+
+        // let sendObj = {
+        //   img: response.data.result_image,
+        //   origin_img: response.data.warpedImg,
+        //   circuit_img: response.data.circuit_img,
+        //   area_points: JSON.stringify(response.data.area_points),
+        //   circuit_analysis: JSON.stringify(response.data.circuit_analysis),
+        //   detected_components: JSON.stringify(detected_components),
+        //   components: JSON.stringify(response.data.components),
+        //   scale: response.data.scale,
+        // };
+
+        // localStorage.area_points = JSON.stringify(response.data.area_points);
+        // localStorage.circuit_analysis = JSON.stringify(
+        //   response.data.circuit_analysis
+        // );
+        // localStorage.canvas_img = response.data.canvasImage;
+
+        // localStorage.detected_components = JSON.stringify(detected_components);
+        // localStorage.scale = response.data.scale;
+
+        // this.$router.push({
+        //   name: "Modify",
+        //   query: sendObj,
+        // });
       });
     },
 

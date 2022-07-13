@@ -10,23 +10,30 @@ import json
 MODEL_PATH = "./model/breadboard-area.model.pt"
 MODEL_LINEAREA_PATH = "./model/line-area.best.pt"
 MODEL_LINE_ENDPOINT_PATH = "./model/line-endpoint.best.pt"
-# IMG = "./images/Circuits/220428/Circuit-12.220428.jpg"
-# IMG = "./images/Circuits/220428/Circuit-7.220428.jpg"
-# IMG = "./images/res.jpg" # 브레드보드만 딴 이미지
+
+# IMG = "./images/Circuits/220404/2_LB.jpeg"
+# check_points = np.array([[ 544,  704], [ 528, 3620], [2376, 3576], [2252,  876]])
+
+# IMG = "backend/static/uploads/prev/origin_img/3_F.jpeg"
+# check_points = np.array([[596, 672], [556, 3396], [2352, 3412], [2388, 696]])
+
+# IMG = "backend/static/uploads/prev/origin_img/Circuit_220504-47.jpeg"
+# check_points = np.array([[2532, 568], [2584, 3336], [756, 3348], [728, 600]])
 
 IMG = "./images/Circuits/220404/2_LB.jpeg"
-JSON = "./images/Circuits/220404/2_LB.json"
 check_points = np.array([[ 544,  704], [ 528, 3620], [2376, 3576], [2252,  876]])
 
 # IMG = "images/Circuits/220504/Circuit_220504-32.jpeg" # -> OK
 # check_points = np.array([[ 404, 524], [ 412, 3692], [2512, 3664], [2488, 512]])
 
-IMG = "images/Circuits/220414/20220414_115935.jpg"
-check_points = np.array([[ 676,  220], [ 668, 2724], [2320, 2736], [2332,  224]])
+# IMG = "images/Circuits/220414/20220414_115935.jpg"
+# check_points = np.array([[ 676,  220], [ 668, 2724], [2320, 2736], [2332,  224]])
 
 # IMG = "images/Circuits/220428/Circuit-5.220428.jpg"
-# # JSON = "test_code/Circuit-5.220428.json"
 # check_points = np.array([[ 596, 568], [ 620, 3288], [2312, 3176], [2440, 596]])
+
+# IMG = "images/Circuits/220512/Circuit_220504-77.jpeg"
+# check_points = np.array([[632, 328], [656, 3052], [2456, 3044], [2448, 300]])
 
 
 def area_padding(old_area, from_: tuple, to_: tuple, canvas_start: tuple or list, canvas_to: tuple or list, expand_to = 0, blank = False):
@@ -156,14 +163,14 @@ def toPerspectiveImage(img, points, padding = 0):
     mtrx = cv2.getPerspectiveTransform(pts1, pts2)
     return pts1, pts2, mtrx, cv2.warpPerspective(img, mtrx, (width + 2*padding, height + 2*padding), flags=cv2.INTER_CUBIC)
 
-def processDataFrame(origin_data, column_name):
-    df = origin_data[(origin_data["name"] == column_name) & (origin_data["confidence"] > 0.7)].copy()
+def processDataFrame(origin_data, column_name, confidence=0.5):
+    df = origin_data[(origin_data["name"] == column_name) & (origin_data["confidence"] > confidence)].copy()
     df['area']      = df.apply(rectArea, axis=1)
     df['center_x']  = df.apply(lambda row: int((row.xmax + row.xmin) / 2), axis=1)
     df['center_y']  = df.apply(lambda row: int((row.ymax + row.ymin) / 2), axis=1)
     df['length']    = df.apply(lambda row: int((row.xmax - row.xmin)), axis=1)
     df['width']     = df.apply(lambda row: int((row.ymax - row.ymin)), axis=1)
-    df['distance_from_origin'] = df.apply(lambda row: int((row.xmin + row.ymin)), axis=1)
+    df['distance_from_origin'] = df.apply(lambda row: int((row.xmin ** 2 + row.ymin ** 2)), axis=1)
     df = df.sort_values(by=['distance_from_origin'], ascending=True)
 
     return df
@@ -213,6 +220,29 @@ def color_test(windowName:str, src):
             np.hstack([area_gray_color, nor,    adapt_gr, adapt_op, adapt_cl, adapt_er])
         ]))
 
+def compareKey(key_table, newKey, oldKey, line_area, end_area):
+    key:int = -1
+    newArea = line_area.iloc[newKey]
+    oldArea = line_area.iloc[oldKey]
+    
+    d1 = (newArea.loc[['xmin', 'ymin', 'xmax', 'ymax']] - end_area.loc[['xmin', 'ymin', 'xmax', 'ymax']]).sum()
+    d2 = (oldArea.loc[['xmin', 'ymin', 'xmax', 'ymax']] - end_area.loc[['xmin', 'ymin', 'xmax', 'ymax']]).sum()
+
+    if d1 > d2:
+        key = newKey
+    else:
+        key = oldKey
+
+    # 영역이 같아져버리는 경우가 생기는데? d1 == d2..
+    # d1, d2 비교 하는걸 다시 생각 해봐야
+
+    if key_table.get(key):
+        compareKey(key_table, key_table[key], oldKey, line_area, end_area)
+    else:
+        key_table[newKey] = key
+
+        return
+
 def line_contains_table(line_area, line_endarea):
     key_table = dict()
 
@@ -222,41 +252,55 @@ def line_contains_table(line_area, line_endarea):
         for j in range(len(line_endarea)):
             endarea = line_endarea.iloc[j]
 
+            print(f"전선영역{i}와 전선연결부{j}와 비교 중")
+
+            print(f"{area.xmin} < {endarea.center_x} < {area.xmax} || {area.ymin} < {endarea.center_y} < {area.ymax}")
+
             # linearea 안에 포함된 lineend를 찾는다.
             if ((area.xmin < endarea.center_x) and (endarea.center_x < area.xmax)) and ((area.ymin < endarea.center_y) and (endarea.center_y < area.ymax)):            
                 if key_table.get(j) != None:
-                    print(j, "겹침", key_table[j], i)
+                    # compareKey(key_table, i, key_table[j], line_area, endarea) # >> 키값 전달이 어디서 꼬이는 듯
 
-                    compare_area_1 = line_area.iloc[key_table[j]]
-                    compare_area_2 = line_area.iloc[i]
+                    newArea = line_area.iloc[i]
+                    oldArea = line_area.iloc[key_table[j]]
+                    end_area = endarea
 
-                    d1_key = j
-                    d2_key = i
+                    d1 = ((newArea.loc[['xmax', 'ymax']] - end_area.loc[['xmin', 'ymin']]) - (end_area.loc[['xmin', 'ymin']] - newArea.loc[['xmin', 'ymin']])).sum()
+                    d2 = ((oldArea.loc[['xmax', 'ymax']] - end_area.loc[['xmin', 'ymin']]) - (end_area.loc[['xmin', 'ymin']] - oldArea.loc[['xmin', 'ymin']])).sum()
 
-                    key = None
+                    newAreaMin = newArea.loc['xmin'], newArea.loc['ymin']
+                    newAreaMax = newArea.loc['xmax'], newArea.loc['ymax']
+                    oldAreaMin = oldArea.loc['xmin'], oldArea.loc['ymin']
+                    oldAreaMax = oldArea.loc['xmax'], oldArea.loc['ymin']
+                    endAreaMin = end_area.loc['xmin'], end_area.loc['ymin']
+                    endAreaMax = end_area.loc['xmax'], end_area.loc['ymax']
 
-                    d1 = (compare_area_1.loc[['xmin', 'ymin', 'xmax', 'ymax']] - endarea.loc[['xmin', 'ymin', 'xmax', 'ymax']]).sum()
-                    d2 = (compare_area_2.loc[['xmin', 'ymin', 'xmax', 'ymax']] - endarea.loc[['xmin', 'ymin', 'xmax', 'ymax']]).sum()
+                    d1 = (endAreaMin[0] - newAreaMin[0]) + (endAreaMin[1] - newAreaMin[1]) + (newAreaMax[0] - endAreaMax[0]) + (newAreaMax[1] - endAreaMax[1])
+                    d2 = (endAreaMin[0] - oldAreaMin[0]) + (endAreaMin[1] - oldAreaMin[1]) + (oldAreaMax[0] - endAreaMax[0]) + (oldAreaMax[1] - endAreaMax[1])
+                    # d1과 d2이 음수가 나오는 의미가..?
 
                     if d1 > d2:
-                        key = d2_key
+                        key = i
+                        
+                    elif d1 < d2:
+                        key = key_table[j]
+
+                    if key_table.get(j) != None:
+                        # tempKey = key_table[key]
+                        key_table[j] = key
+                        
                     else:
-                        key = d1_key
-
-                    print(j, '->', key)
-
-                    key_table[j] = key
+                        key_table[j] = key
 
                 else:   
                     key_table[j] = i
-
             # 겹치는게 있다면 그 중 가장 가까운 영역을 찾는다.
     
     return key_table
 
 if __name__ == "__main__":
     rng = 0.05
-    PADDING = 500
+    PADDING = 450
 
     target = cv2.imread(IMG, cv2.COLOR_RGB2BGR)
     # shapes = json.load(open(JSON, "r"))["shapes"]
@@ -267,15 +311,34 @@ if __name__ == "__main__":
 
     _, base_point, mtrx, target = toPerspectiveImage(target, check_points, PADDING)
 
+    target_width = int(base_point[2][0] - base_point[0][0])
+    target_height = int(base_point[2][1] - base_point[0][1])
+
+    target_area = target_width * target_height
+
+    # 1815 2743 4978545 0.6616842872767044
+    # 2099 3167 6647533 0.6627723397537101
+    # 1847 2915 5384005 0.6336192109777016
+    # 1843 2719 5011117 0.6778227289444648
+    # 1655 2511 4155705 0.659099960175229
+    # 1827 2767 5055309 0.6602818937477413
+    print(target_width, target_height, target_area, target_width / target_height)
+
     detect_line_area = pd.DataFrame(line_area_detect_model(target).pandas().xyxy[0])
     detect_line_endarea = pd.DataFrame(line_endpoint_detect_model(target).pandas().xyxy[0])
 
-    line_area = processDataFrame(detect_line_area, "line-area")
-    line_endarea = processDataFrame(detect_line_endarea, "line-endpoint")
+    line_area = processDataFrame(detect_line_area, "line-area", 0.3)
+    line_endarea = processDataFrame(detect_line_endarea, "line-endpoint", 0.3)
+
+    print(line_area)
+    print(line_endarea)
 
     key_table = line_contains_table(line_area, line_endarea)
+    print(key_table)
 
     key_table = pd.Series(key_table)
+
+    print(key_table.values)
 
     for la_num in set(key_table.values):
         line_e = key_table[key_table == la_num]
@@ -284,21 +347,25 @@ if __name__ == "__main__":
         G = int(random.random() * 255)
         B = int(random.random() * 255)
 
-        line_a = line_area.iloc[la_num]
+        try:
+            line_a = line_area.iloc[la_num]
 
-        minPointLine = round(line_a.xmin), round(line_a.ymin)
-        maxPointLine = round(line_a.xmax), round(line_a.ymax)
+            minPointLine = round(line_a.xmin), round(line_a.ymin)
+            maxPointLine = round(line_a.xmax), round(line_a.ymax)
 
-        cv2.rectangle(target, minPointLine , maxPointLine , (B, G, R), 10, cv2.FILLED)
+            cv2.putText(target, f"line#{la_num}", (minPointLine[0], minPointLine[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 2)
+            cv2.rectangle(target, minPointLine , maxPointLine , (B, G, R), 10, cv2.FILLED)
 
-        for areaIdx, line_a in line_e.iteritems():
-            line_e = line_endarea.iloc[areaIdx]
+            for areaIdx, line_a in line_e.iteritems():
+                line_e = line_endarea.iloc[areaIdx]
 
-            minPointEnd = round(line_e.xmin), round(line_e.ymin)
-            maxPointEnd = round(line_e.xmax), round(line_e.ymax)
+                minPointEnd = round(line_e.xmin), round(line_e.ymin)
+                maxPointEnd = round(line_e.xmax), round(line_e.ymax)
 
-            cv2.rectangle(target, minPointEnd , maxPointEnd , (B, G, R), 10, cv2.FILLED)
-
+                cv2.putText(target, f"end#{areaIdx}", (minPointEnd[0], minPointEnd[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 0), 2)
+                cv2.rectangle(target, minPointEnd , maxPointEnd , (B, G, R), 10, cv2.FILLED)
+        except:
+            pass
 
     cv2.imshow("Res", target)
     cv2.waitKey(0)
