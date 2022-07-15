@@ -139,7 +139,7 @@ def set_line_component(line_area_pd, line_endarea_pd, table, search_map, base_po
         return temp
 
 def set_resistor_component(resistor_area_pd, search_map, base_point, target_image, canvas_image):
-        temp = []
+        temp = {}
         r = int(random.random() * 255)
         g = int(random.random() * 255)
         b = int(random.random() * 255)
@@ -172,8 +172,7 @@ def set_resistor_component(resistor_area_pd, search_map, base_point, target_imag
             x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)
             x2, y2, pin2 = getPinCoords(search_map, table_idx, pt2, area_start)
 
-            temp.append(
-            {
+            temp[f"R{i}"] = {
                 "class": "Resistor", 
                 "name": f"R{i}", 
                 "start": pin1, 
@@ -183,7 +182,7 @@ def set_resistor_component(resistor_area_pd, search_map, base_point, target_imag
                 "value": 100,
                 "areaStart": minPoint,
                 "areaEnd": maxPoint
-            })
+            }
 
             # 이미지에 표시
             cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2)
@@ -197,6 +196,29 @@ def set_resistor_component(resistor_area_pd, search_map, base_point, target_imag
 @app.route("/")
 def main():
     return "hi"
+
+@app.route("/pinmap", methods=['GET'])
+def pinmap():
+    global body_pinmap, vol_pinmap
+    search_pin = request.args.get('pin')
+
+    assert search_pin != None
+    assert search_pin[0] in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'V']
+
+    if search_pin[0] == 'V':
+        assert int(search_pin[2:]) >= 1 and int(search_pin[2:]) <= 25
+        row, col = int(search_pin[2:])-1, search_pin[:2]
+    else:
+        assert int(search_pin[1:]) >= 1 and int(search_pin[1:]) <= 30
+        row, col = int(search_pin[1:])-1, search_pin[0]
+    
+
+    search_map = pd.concat([vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1)
+    x, y = search_map.xs(row)[col]['x'], search_map.xs(row)[col]['y']
+
+    return jsonify({
+        "coord": [x, y]
+    })
 
 @app.route("/resistor", methods=['GET', 'POST'])
 def resistor():
@@ -329,98 +351,64 @@ def calc():
         }
     })
 
-@app.route("/check", methods=['GET', 'POST'])
-def check():
-    pprint.pprint(components)
+@app.route("/network", methods=['GET', 'POST'])
+def network():
+    if request.method == 'POST':
+        components = request.get_json()
 
-    # Circuit-38.220428
+        lines = pd.DataFrame(components["Line"])
+        resistors = pd.DataFrame(components["Resistor"])
 
-    cps = pd.DataFrame(components)
-    circuit = findNetwork(cps)
+        components = pd.concat([lines, resistors], axis=1).transpose()
 
-    print(circuit)
+        circuit = findNetwork(components)
 
-    c = []
-    c_idx = 0
-    prev_layer = 0
+        c = []
+        c_idx = 0
+        prev_layer = 0
 
-    for i in range(len(circuit)):
-        row = circuit.iloc[i]
-        d = {
-            "name": row['name'],
-            "value": row['value']
-        }
+        for i in range(len(circuit)):
+            row = circuit.iloc[i]
+            d = {
+                "name": row['name'],
+                "value": row['value']
+            }
 
-    for i in range(len(circuit)):
-        row = circuit.iloc[i]
+        for i in range(len(circuit)):
+            row = circuit.iloc[i]
 
-        if "R" not in row['name']:
-            continue
-        
-        print(row['name'])
-        if i >= len(circuit):
-            break
+            if "R" not in row['name']:
+                continue
+            
+            if i >= len(circuit):
+                break
 
-        d = {
-            "name": row['name'],
-            "value": row['value']
-        }
+            d = {
+                "name": row['name'],
+                "value": row['value']
+            }
 
-        now_layer = row.layer
+            now_layer = row.layer
 
-        if now_layer == 0:
-            c.append([d])
+            if now_layer == 0:
+                c.append([d])
 
+            if (now_layer == prev_layer):
+                if now_layer != 0:
+                    try:
+                        c[c_idx].append(d)
+                    except:
+                        c[c_idx].append(d)
+            else:
+                c.append([d])
+                c_idx += 1
 
-        print(now_layer, prev_layer)
+            prev_layer = now_layer
 
-        if (now_layer == prev_layer):
-            if now_layer != 0:
-                try:
-                    c[c_idx].append(d)
-                except:
-                    c[c_idx].append(d)
-        else:
-            c.append([d])
-            c_idx += 1
+        circuit_component_data = c
 
-        prev_layer = now_layer
+        return jsonify(circuit_component_data)
 
-    # circuit_component_data = [[{"name": f"R{key}", "value": 10}] for key in resistor_body_key]
-    circuit_component_data = c
-
-    print("detect -> circuit_component_data", circuit_component_data)
-
-    R_TH, I, NODE_VOL = calcCurrentAndVoltage(V, circuit_component_data)
-
-    print(R_TH, I, NODE_VOL)
-
-    _, buffer = cv2.imencode('.jpg', get_resistor_body_picking_image)
-    _, canvasBUffer = cv2.imencode(".jpg", canvas_image)
-
-    cv2.imwrite("get_resistor_body_picking_image.jpg", get_resistor_body_picking_image)
-    jpg_as_text = base64.b64encode(buffer).decode()
-    dd = base64.b64encode(canvasBUffer).decode()
-
-    return jsonify({
-        "result_image": jpg_as_text,
-        "circuit": base64.b64encode(drawDiagram(V, circuit_component_data)).decode(),
-        "canvasImage": dd,
-        "area_points": json.loads(resistor_body_points),
-        "detected_components": {
-            "resistor_area": json.loads(resistor_area_points),
-            "resistor_body": json.loads(resistor_body_points),
-            "line_area": json.loads(linearea_points),
-            "lineend_area": json.loads(lineendarea_points) 
-        },
-        "components": components,
-        "circuit_analysis": {
-            "r_th": str(R_TH),
-            "node_current": str(I),
-            "node_voltage": str(NODE_VOL)
-        },
-        "scale": scale
-    })
 
 @app.route("/detect", methods=['POST'])
 def detect():
@@ -601,7 +589,7 @@ def init():
         find_pincoords_resi_model,  \
         find_pincoords_line_model
     
-    PADDING = 150
+    PADDING = 0
 
     pinmap = json.load(open("static/data/pinmap.json"))
     pinmap_shape = pinmap["shape"]

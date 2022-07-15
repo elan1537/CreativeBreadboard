@@ -405,10 +405,10 @@ export default {
           let end_coord = row.end_coord;
           console.log(start_coord[0] * this.scale, start_coord[1] * this.scale);
           this.context.beginPath();
-          this.context.fillStyle = "blue";
+          this.context.fillStyle = "red";
           this.context.font = "20px Arial";
           this.context.fillText(
-            row.start_pin,
+            row.start,
             start_coord[0] * this.scale,
             start_coord[1] * this.scale - 20
           );
@@ -433,8 +433,9 @@ export default {
             true
           );
           this.context.font = "20px Arial";
+          this.context.fillStyle = "orange";
           this.context.fillText(
-            row.end_pin,
+            row.end,
             end_coord[0] * this.scale,
             end_coord[1] * this.scale + 20
           );

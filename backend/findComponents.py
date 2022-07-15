@@ -13,7 +13,7 @@ MODEL_LINEENDAREA_PATH = "../model/line-endpoint.model.pt"
 BREADBOARD_COL_INDEX = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F', 'G', 'G', 'H', 'H', 'I', 'I', 'J', 'J']
 BREADBOARD_ROW_INDEX = range(30)
 
-PADDING = 150
+PADDING = 0
 
 ''' 
     이미지 왜곡 수정 함수 
