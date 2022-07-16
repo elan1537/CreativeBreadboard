@@ -182,8 +182,29 @@ export default {
         method: "post",
         data: data,
         headers: { "Content-Type": "application/json" },
-      }).then((response) => {
-        console.log(response);
+      }).then(() => {
+        axios({
+          url: "/calc",
+          method: "get",
+          headers: { "Content-Type": "application/json" },
+        }).then((response) => {
+          localStorage.circuitAnalysis = JSON.stringify(
+            response.data.circuit_analysis
+          );
+        });
+        axios({
+          url: "/draw",
+          method: "get",
+          headers: { "Content-Type": "multipart/form-data" },
+        }).then((response) => {
+          let circuitDiagram =
+            "data:image/png;base64," + response.data["circuit"];
+          localStorage.circuitDiagram = circuitDiagram;
+
+          this.$router.push({
+            name: "Result",
+          });
+        });
       });
     },
 

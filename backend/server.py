@@ -200,6 +200,9 @@ def main():
 @app.route("/pinmap", methods=['GET'])
 def pinmap():
     global body_pinmap, vol_pinmap
+    search_map = None
+    row = None
+    col = None
     search_pin = request.args.get('pin')
 
     assert search_pin != None
@@ -211,9 +214,14 @@ def pinmap():
     else:
         assert int(search_pin[1:]) >= 1 and int(search_pin[1:]) <= 30
         row, col = int(search_pin[1:])-1, search_pin[0]
-    
 
-    search_map = pd.concat([vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1)
+
+    if isinstance(body_pinmap, type(None)):
+        search_map = pd.read_json(json.load(open("./warpedPinmap.json")))
+    else:    
+        search_map = pd.concat([vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1)
+    
+    print(search_map)
     x, y = search_map.xs(row)[col]['x'], search_map.xs(row)[col]['y']
 
     return jsonify({
@@ -354,6 +362,7 @@ def calc():
 @app.route("/network", methods=['GET', 'POST'])
 def network():
     if request.method == 'POST':
+        global circuit_component_data
         components = request.get_json()
 
         lines = pd.DataFrame(components["Line"])
@@ -361,53 +370,49 @@ def network():
 
         components = pd.concat([lines, resistors], axis=1).transpose()
 
+        print(components)
+
+        '''
+            일단 지금은 사용자가 모든 핀을 정상적으로 오류를 캐치했을 때를 가정하고 네트워크를 구성하고 있음
+            추가적으로 네트워크를 찾다가 잘못된 부분을 alert 하는거 구현해야함.
+        '''
+        '''
+            OMG... D7과 H7이 같은 노드라고 나옴.. 이거 분리..~
+        '''
+
         circuit = findNetwork(components)
 
-        c = []
-        c_idx = 0
-        prev_layer = 0
 
-        for i in range(len(circuit)):
-            row = circuit.iloc[i]
-            d = {
-                "name": row['name'],
-                "value": row['value']
-            }
+        # 아래의 코드는 위에서 계층을 찾으면 그걸 토대로 저항소자만 빼오는 구조
+        # 위 데이터의 결과는 
+
+        print(circuit)
+
+        table = {}
 
         for i in range(len(circuit)):
             row = circuit.iloc[i]
 
             if "R" not in row['name']:
                 continue
-            
-            if i >= len(circuit):
-                break
 
             d = {
                 "name": row['name'],
                 "value": row['value']
             }
 
-            now_layer = row.layer
-
-            if now_layer == 0:
-                c.append([d])
-
-            if (now_layer == prev_layer):
-                if now_layer != 0:
-                    try:
-                        c[c_idx].append(d)
-                    except:
-                        c[c_idx].append(d)
+            if table.get(row.layer) is None:
+                table[int(row.layer)] = [d]
             else:
-                c.append([d])
-                c_idx += 1
+                table[int(row.layer)].append(d)
 
-            prev_layer = now_layer
+        table = [value for _, value in table.items()]
 
-        circuit_component_data = c
+        circuit_component_data = table
 
-        return jsonify(circuit_component_data)
+        return jsonify({
+            "network": table
+        })
 
 
 @app.route("/detect", methods=['POST'])
@@ -439,6 +444,8 @@ def detect():
 
     initializePinmaps(body_pinmap, vol_pinmap, transform_mtrx)
     search_map = pd.concat([vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1)
+
+    json.dump(search_map.to_csv(), open("./warpedPinmap.csv", "w"))
 
     print("resistor_area_pd:", len(resistor_area_pd))
     print("resistor_body_pd:", len(resistor_body_pd))
