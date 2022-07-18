@@ -5,37 +5,46 @@
       <div class="col-md-7">
         <ImageModify
           :img_src="image"
-          :isSuccess="false"
+          :is-success="false"
           @sendData="receiveData"
           @pointCount="checkPointCount"
-        ></ImageModify>
+        />
       </div>
-      <div class="col-md-5" style="margin-bottom: 100px">
+      <div
+        class="col-md-5"
+        style="margin-bottom: 100px"
+      >
         <form
           action="http://localhost:3000/image"
           method="POST"
           enctype="multipart/form-data"
         >
           <div class="mb-3">
-            <label for="a" class="form-label">전압 입력</label>
+            <label
+              for="a"
+              class="form-label"
+            >전압 입력</label>
             <input
               type="number"
               class="form-control"
               placeholder="V 단위로 입력하세요"
               @input="setVoltage"
-            />
+            >
           </div>
           <div class="mb-3">
-            <label for="formFile" class="form-label">회로 이미지 입력</label>
+            <label
+              for="formFile"
+              class="form-label"
+            >회로 이미지 입력</label>
             <input
-              class="form-control"
+              id="file"
               ref="image"
-              @change="uploadImg"
+              class="form-control"
               name="file"
               type="file"
-              id="file"
               accept="image/*"
-            />
+              @change="uploadImg"
+            >
           </div>
           <div class="d-grid gap-2">
             <button

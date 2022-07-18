@@ -8,22 +8,25 @@
             id="imageLayer"
             ref="imageLayer"
             :src="uploaded_img"
-            @load="onImageLoad"
             style="z-index: 0"
-          />
+            @load="onImageLoad"
+          >
           <canvas
-            ref="canvas"
             id="cropLayer"
+            ref="canvas"
             style="position: absolute; left: 0; top: 0; z-index: 1"
             @mousemove="onMove"
             @mousedown="onDown"
-          ></canvas>
+          />
         </div>
       </div>
       <div class="col-md-5">
         <div class="row gx-4 gx-lg-5">
           <div class="col">
-            <CardBody :title="title_1" :text="'저항영역을 수정해주세요'">
+            <CardBody
+              :title="title_1"
+              :text="'저항영역을 수정해주세요'"
+            >
               <template #footer>
                 <div class="row">
                   <button
@@ -35,8 +38,8 @@
                     modify
                   </button>
                   <div
-                    class="modal fade"
                     id="exampleModal2"
+                    class="modal fade"
                     tabindex="-1"
                     aria-labelledby="exampleModalLabel2"
                     aria-hidden="true"
@@ -44,7 +47,10 @@
                     <div class="modal-dialog">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h2 class="modal-title" id="exampleModalLabel2">
+                          <h2
+                            id="exampleModalLabel2"
+                            class="modal-title"
+                          >
                             저항영역을 수정하세요
                           </h2>
                           <button
@@ -52,13 +58,13 @@
                             class="btn-close"
                             data-bs-dismiss="modal"
                             aria-label="Close"
-                          ></button>
+                          />
                         </div>
                         <div class="modal-body">
                           <div
-                            class="row mb-3"
                             v-for="(row, idx) in temp_area_points"
                             :key="`${row}_${idx}`"
+                            class="row mb-3"
                           >
                             <div class="col">
                               {{ row }}
@@ -101,12 +107,15 @@
           width="600"
           height="800"
           alt="..."
-        />
+        >
       </div>
       <div class="col-md-5">
         <div class="row gx-4 gx-lg-5">
           <div class="col">
-            <CardBody :title="title_2" :text="'저항값을 수정해주세요'">
+            <CardBody
+              :title="title_2"
+              :text="'저항값을 수정해주세요'"
+            >
               <template #footer>
                 <div class="row">
                   <button
@@ -119,8 +128,8 @@
                   </button>
                   <!-- Modal -->
                   <div
-                    class="modal fade"
                     id="exampleModal"
+                    class="modal fade"
                     tabindex="-1"
                     aria-labelledby="exampleModalLabel"
                     aria-hidden="true"
@@ -128,35 +137,37 @@
                     <div class="modal-dialog">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h2 class="modal-title" id="exampleModalLabel">
+                          <h2
+                            id="exampleModalLabel"
+                            class="modal-title"
+                          >
                             저항값을 입력하세요
                           </h2>
                           <button
                             type="button"
                             class="btn-close"
                             aria-label="Close"
-                          ></button>
+                          />
                         </div>
                         <div class="modal-body">
                           <div
-                            class="row mb-3"
                             v-for="(row, idx) in circuit"
                             :key="`${row}_${idx}`"
+                            class="row mb-3"
                           >
                             <label
                               :for="row['name']"
                               class="col-sm-3 col-form-label"
-                              >{{ row["name"] }}</label
-                            >
+                            >{{ row["name"] }}</label>
                             <div class="col">
                               <input
+                                :id="row['name']"
                                 type="number"
                                 class="form-control"
                                 :placeholder="row['value']"
-                                :id="row['name']"
                                 :value="row['value']"
                                 @input="setResistorValue($event, row['name'])"
-                              />
+                              >
                             </div>
                           </div>
                         </div>
@@ -197,6 +208,7 @@ import axios from "axios";
 
 export default {
   component: { CardBody, ImageModify },
+  components: { CardBody },
   data() {
     return {
       circuit: [
@@ -635,6 +647,5 @@ export default {
       }
     },
   },
-  components: { CardBody },
 };
 </script>

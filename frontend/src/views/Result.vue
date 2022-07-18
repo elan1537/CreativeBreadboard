@@ -8,14 +8,14 @@
             id="imageLayer"
             ref="imageLayer"
             :src="uploaded_img"
-            @load="onImageLoad"
             style="z-index: 0"
-          />
+            @load="onImageLoad"
+          >
           <canvas
-            ref="canvas"
             id="cropLayer"
+            ref="canvas"
             style="position: absolute; left: 0; top: 0; z-index: 1"
-          ></canvas>
+          />
         </div>
       </div>
       <div class="col-lg-5">
@@ -26,32 +26,35 @@
             width="600"
             height="800"
             alt="..."
-          />
+          >
         </div>
         <div class="row mb-3">
           <div class="col">
             <div class="dropdown">
               <div class="d-grid gap-2">
                 <button
+                  id="dropdownMenuLink"
                   class="btn btn-secondary dropdown-toggle"
                   href="#"
                   role="button"
-                  id="dropdownMenuLink"
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
                 >
                   전압
                 </button>
-                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                <ul
+                  class="dropdown-menu"
+                  aria-labelledby="dropdownMenuLink"
+                >
                   <li
                     v-for="(row, idx) in JSON.parse(
                       circuit_analysis['node_voltage']
                     )"
                     :key="`${row}_${idx}`"
                   >
-                    <a class="dropdown-item"
-                      >Node-{{ idx }}::{{ parseFloat(row[0]).toFixed(3) }}V</a
-                    >
+                    <a
+                      class="dropdown-item"
+                    >Node-{{ idx }}::{{ parseFloat(row[0]).toFixed(3) }}V</a>
                   </li>
                 </ul>
               </div>
@@ -61,16 +64,19 @@
             <div class="dropdown">
               <div class="d-grid gap-2">
                 <button
+                  id="dropdownMenuLink"
                   class="btn btn-secondary dropdown-toggle"
                   href="#"
                   role="button"
-                  id="dropdownMenuLink"
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
                 >
                   전류
                 </button>
-                <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                <ul
+                  class="dropdown-menu"
+                  aria-labelledby="dropdownMenuLink"
+                >
                   <li>
                     {{
                       parseFloat(circuit_analysis["node_current"]).toFixed(3)
@@ -81,12 +87,13 @@
             </div>
           </div>
         </div>
-        <div class="row">합성저항 :: {{ circuit_analysis["r_th"] }}</div>
+        <div class="row">
+          합성저항 :: {{ circuit_analysis["r_th"] }}
+        </div>
       </div>
     </div>
   </div>
 </template>
-<style></style>
 <script>
 export default {
   name: "Result",

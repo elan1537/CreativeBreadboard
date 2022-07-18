@@ -4,24 +4,24 @@
       <h1>Check View</h1>
     </div>
     <div class="row">
-      <div class="col-1"></div>
+      <div class="col-1" />
       <div class="col-6">
         <div style="position: relative">
           <img
             id="imageLayer"
             ref="imageLayer"
             :src="uploaded_img"
-            @load="onImageLoad"
             style="z-index: 0"
-          />
+            @load="onImageLoad"
+          >
           <canvas
-            ref="canvas"
             id="cropLayer"
+            ref="canvas"
             style="position: absolute; left: 0; top: 0; z-index: 1"
             @mousemove="onMove"
             @mousedown="onDown"
             @click="onClick"
-          ></canvas>
+          />
         </div>
       </div>
       <div class="col-5">
@@ -29,12 +29,22 @@
           <table class="table table-hover">
             <thead>
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">컴포넌트 이름</th>
-                <th scope="col">컴포넌트 클래스</th>
-                <th scope="col">연결핀 1</th>
-                <th scope="col">연결핀 2</th>
-                <th scope="col"></th>
+                <th scope="col">
+                  #
+                </th>
+                <th scope="col">
+                  컴포넌트 이름
+                </th>
+                <th scope="col">
+                  컴포넌트 클래스
+                </th>
+                <th scope="col">
+                  연결핀 1
+                </th>
+                <th scope="col">
+                  연결핀 2
+                </th>
+                <th scope="col" />
               </tr>
             </thead>
             <tbody>
@@ -42,109 +52,164 @@
                 v-for="value in detected_line_components"
                 :key="value['name']"
               >
-                <td scope="col"></td>
+                <td scope="col" />
                 <td>{{ value["name"] }}</td>
 
                 <td v-if="click_table[value['name']]">
-                  <select class="form-select" aria-label="클래스">
-                    <option selected value="1">Line</option>
-                    <option value="2">Resistor</option>
+                  <select
+                    class="form-select"
+                    aria-label="클래스"
+                  >
+                    <option
+                      selected
+                      value="1"
+                    >
+                      Line
+                    </option>
+                    <option value="2">
+                      Resistor
+                    </option>
                   </select>
                 </td>
-                <td v-else>{{ value["class"] }}</td>
+                <td v-else>
+                  {{ value["class"] }}
+                </td>
 
                 <td v-if="click_table[value['name']]">
                   <input
+                    v-model="detected_line_components[value['name']]['start']"
                     type="text"
                     class="form-control"
                     placeholder="시작점"
                     aria-label="시작점"
-                    v-model="detected_line_components[value['name']]['start']"
-                  />
+                  >
                 </td>
-                <td v-else>{{ value["start"] }}</td>
+                <td v-else>
+                  {{ value["start"] }}
+                </td>
 
                 <td v-if="click_table[value['name']]">
                   <input
+                    v-model="detected_line_components[value['name']]['end']"
                     type="text"
                     class="form-control"
                     placeholder="끝점"
                     aria-label="끝점"
-                    v-model="detected_line_components[value['name']]['end']"
-                  />
+                  >
                 </td>
-                <td v-else>{{ value["end"] }}</td>
+                <td v-else>
+                  {{ value["end"] }}
+                </td>
 
                 <td v-if="click_table[value['name']]">
-                  <div @click="edit_row(value['name'])">update</div>
-                  <div @click="click_table[value['name']] = false">cancel</div>
+                  <div @click="edit_row(value['name'])">
+                    update
+                  </div>
+                  <div @click="click_table[value['name']] = false">
+                    cancel
+                  </div>
                 </td>
 
-                <td v-else @click="edit_row(value['name'])">edit</td>
+                <td
+                  v-else
+                  @click="edit_row(value['name'])"
+                >
+                  edit
+                </td>
               </tr>
               <tr
                 v-for="value in detected_resistor_components"
                 :key="value['name']"
               >
-                <td scope="col"></td>
+                <td scope="col" />
                 <td>{{ value["name"] }}</td>
 
                 <td v-if="click_table[value['name']]">
-                  <select class="form-select" aria-label="클래스">
-                    <option value="1">Line</option>
-                    <option selected value="2">Resistor</option>
+                  <select
+                    class="form-select"
+                    aria-label="클래스"
+                  >
+                    <option value="1">
+                      Line
+                    </option>
+                    <option
+                      selected
+                      value="2"
+                    >
+                      Resistor
+                    </option>
                   </select>
                 </td>
-                <td v-else>{{ value["class"] }}</td>
+                <td v-else>
+                  {{ value["class"] }}
+                </td>
 
                 <td v-if="click_table[value['name']]">
                   <input
+                    v-model="
+                      detected_resistor_components[value['name']]['start']
+                    "
                     type="text"
                     class="form-control"
                     placeholder="시작점"
                     aria-label="시작점"
-                    v-model="
-                      detected_resistor_components[value['name']]['start']
-                    "
-                  />
+                  >
                 </td>
-                <td v-else>{{ value["start"] }}</td>
+                <td v-else>
+                  {{ value["start"] }}
+                </td>
 
                 <td v-if="click_table[value['name']]">
                   <input
+                    v-model="detected_resistor_components[value['name']]['end']"
                     type="text"
                     class="form-control"
                     placeholder="끝점"
                     aria-label="끝점"
-                    v-model="detected_resistor_components[value['name']]['end']"
-                  />
+                  >
                 </td>
-                <td v-else>{{ value["end"] }}</td>
+                <td v-else>
+                  {{ value["end"] }}
+                </td>
 
                 <td v-if="click_table[value['name']]">
-                  <div @click="edit_row(value['name'])">update</div>
-                  <div @click="click_table[value['name']] = false">cancel</div>
+                  <div @click="edit_row(value['name'])">
+                    update
+                  </div>
+                  <div @click="click_table[value['name']] = false">
+                    cancel
+                  </div>
                 </td>
-                <td v-else @click="edit_row(value['name'])">edit</td>
+                <td
+                  v-else
+                  @click="edit_row(value['name'])"
+                >
+                  edit
+                </td>
               </tr>
             </tbody>
           </table>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="addArea"
+          >
+            영역 추가
+          </button>
         </div>
       </div>
     </div>
     <div class="row">
-      <button type="button" class="btn btn-primary" @click="areaCheck">
+      <button
+        type="button"
+        class="btn btn-primary"
+        @click="areaCheck"
+      >
         영역 확인
       </button>
     </div>
   </div>
 </template>
-<style>
-.row > button {
-  margin-top: 30px;
-  margin-bottom: 10px;
-}
-</style>
 <script>
 import ImageModify from "../components/ImageModify.vue";
 import axios from "axios";
@@ -446,15 +511,22 @@ export default {
         this.set_drawable_area(unknown_components, "green");
       };
     },
-    onClick(event) {
-      console.log(event.offsetX, event.offsetY);
-    },
+    onClick(event) {console.log(event.offsetX, event.offsetY); },
     onMouseDown(event) {
       console.log(event);
     },
     onMouseMove(event) {
       console.log(event);
     },
+    addArea() {
+
+    },
   },
 };
 </script>
+<style>
+.row > button {
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+</style>
