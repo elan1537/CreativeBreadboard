@@ -197,7 +197,7 @@ export default {
 
           axios({
             method: "post",
-            url: "/image",
+            url: "http://localhost:3000/image",
             headers: {
               "Content-Type": "multipart/form-data",
             },
