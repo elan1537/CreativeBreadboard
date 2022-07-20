@@ -237,19 +237,16 @@ export default {
   },
   methods: {
     async areaCheck() {
-      console.log("Are you sure?");
-
       let data = localStorage.components;
-      console.log(data);
 
       await axios({
-        url: "/network",
+        url: "http://localhost:3000/network",
         method: "post",
         data: data,
         headers: { "Content-Type": "application/json" },
       }).then(() => {
         axios({
-          url: "/calc",
+          url: "http://localhost:3000/calc",
           method: "get",
           headers: { "Content-Type": "application/json" },
         }).then((response) => {
@@ -258,7 +255,7 @@ export default {
           );
         });
         axios({
-          url: "/draw",
+          url: "http://localhost:3000/draw",
           method: "get",
           headers: { "Content-Type": "multipart/form-data" },
         }).then((response) => {
@@ -284,7 +281,7 @@ export default {
           updatedComponent = this.detected_line_components[id];
 
           await axios({
-            url: "/pinmap",
+            url: "http://localhost:3000/pinmap",
             method: "get",
             params: {
               pin: updatedComponent.start,
@@ -297,7 +294,7 @@ export default {
           });
 
           await axios({
-            url: "/pinmap",
+            url: "http://localhost:3000/pinmap",
             method: "get",
             params: {
               pin: updatedComponent.end,
@@ -316,7 +313,7 @@ export default {
           updatedComponent = this.detected_resistor_components[id];
 
           await axios({
-            url: "/pinmap",
+            url: "http://localhost:3000/pinmap",
             method: "get",
             params: {
               pin: updatedComponent.start,
@@ -328,7 +325,7 @@ export default {
           });
 
           await axios({
-            url: "/pinmap",
+            url: "http://localhost:3000/pinmap",
             method: "get",
             params: {
               pin: updatedComponent.end,
@@ -385,8 +382,6 @@ export default {
     set_drawable_area(component, color) {
       Object.keys(component).forEach((key) => {
         let row = component[key];
-
-        // console.log(row.start_coord);
 
         let startCoord = [
           row.start_coord[0] * this.scale,
@@ -518,7 +513,7 @@ export default {
     onMouseMove(event) {
       console.log(event);
     },
-    addArea() {
+    addArea() {this.context.clearRect(0, 0, 4000, 3000)
 
     },
   },
