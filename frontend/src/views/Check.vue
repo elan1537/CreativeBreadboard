@@ -412,37 +412,6 @@ export default {
           endCoord[1],
         ]);
 
-        // if (row.class === "Line") {
-        //   let start_endAreaStart = [
-        //     row.start_endAreaStart[0] * this.scale,
-        //     row.start_endAreaStart[1] * this.scale,
-        //   ];
-        //   let start_endAreaEnd = [
-        //     row.start_endAreaEnd[0] * this.scale,
-        //     row.start_endAreaEnd[1] * this.scale,
-        //   ];
-        //   let end_endAreaStart = [
-        //     row.end_endAreaStart[0] * this.scale,
-        //     row.end_endAreaStart[1] * this.scale,
-        //   ];
-        //   let end_endAreaEnd = [
-        //     row.end_endAreaEnd[0] * this.scale,
-        //     row.end_endAreaEnd[1] * this.scale,
-        //   ];
-        //   this.draw_rect_component(
-        //     this.context,
-        //     color,
-        //     [start_endAreaStart[0], start_endAreaStart[1]],
-        //     [start_endAreaEnd[0], start_endAreaEnd[1]]
-        //   );
-        //   this.draw_rect_component(
-        //     this.context,
-        //     color,
-        //     [end_endAreaStart[0], end_endAreaStart[1]],
-        //     [end_endAreaEnd[0], end_endAreaEnd[1]]
-        //   );
-        // }
-
         this.draw_rect_component(
           this.context,
           color,
@@ -506,15 +475,8 @@ export default {
         this.set_drawable_area(unknown_components, "green");
       };
     },
-    onClick(event) {console.log(event.offsetX, event.offsetY); },
-    onMouseDown(event) {
-      console.log(event);
-    },
-    onMouseMove(event) {
-      console.log(event);
-    },
-    addArea() {this.context.clearRect(0, 0, 4000, 3000)
-
+    addArea() {
+      this.context.clearRect(0, 0, 4000, 3000);
     },
   },
 };
