@@ -34,12 +34,6 @@ Detection 한 회로에 대해 이미지 파일로 변환.
 ### calcVoltageAndCurrent.py
 Detection 된 components 에서 전류와 전압 계산. 
 
-### (Depricated) warpedPinmap.csv
-
-
-### (Depricated) warpedPinmap.json
-
-
 ## 폴더 리스트
 
 ### static
