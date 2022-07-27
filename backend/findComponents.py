@@ -15,16 +15,14 @@ BREADBOARD_ROW_INDEX = range(30)
 
 PADDING = 0
 
-''' 
-    이미지 왜곡 수정 함수 
-    padding 만큼 여백을 주어 왜곡 수정을 한다.
-'''
-
 resistor_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_RESISTORAREA_PATH)
 linearea_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_LINEAREA_PATH)
 lineendarea_detect_model = torch.hub.load('ultralytics/yolov5', 'custom', path=MODEL_LINEENDAREA_PATH)
 
 def toPerspectiveImage(img, points, padding = 0):
+    ''' 
+        검출할 img를 points 기준으로 padding을 설정하여 원근변환을 한다.
+    '''
     if points.ndim != 2:
         points = points.reshape((-1, 2))
     
@@ -178,6 +176,9 @@ def processDataFrame(origin_data, column_name, confidence=0.1):
         return pd.DataFrame({})
 
 def checkLinearea(target):
+    '''
+        전선 영역을 검출한다.
+    '''
     global linearea_detect_model
 
     if linearea_detect_model is None:
@@ -197,6 +198,9 @@ def checkLinearea(target):
     return target, line_area.transpose().to_json(), line_area
 
 def checkLineEndArea(target):
+    '''
+        전선 꼭지 영역을 검출한다.
+    '''
     global lineendarea_detect_model
 
     if lineendarea_detect_model is None:
@@ -211,6 +215,9 @@ def checkLineEndArea(target):
     return target, line_end_area.transpose().to_json(), line_end_area
 
 def checkResistorArea(target):
+    '''
+        저항 영역을 검출한다.
+    '''
     ''' Resistor DataFrame 처리 '''
     global resistor_detect_model
 
@@ -226,6 +233,9 @@ def checkResistorArea(target):
     return target, resistor_area.transpose().to_json(), resistor_area
 
 def checkResistorBody(target):
+    '''
+        저항값이 담긴 영역을 검출한다.
+    '''
     ''' Resistor DataFrame 처리 '''
     global resistor_detect_model
 
