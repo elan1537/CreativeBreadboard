@@ -1,21 +1,11 @@
 module.exports = {
-    "env": {
-        "browser": true,
-        "es2020": true,
-        "node": true
-    },
-    "extends": [
-        "eslint:recommended",
-        "plugin:vue/essential"
-    ],
-    "parserOptions": {
-        "ecmaVersion": 11,
-        "sourceType": "module"
-    },
-    "plugins": [
-        "vue"
-    ],
-    "rules": {
-        "vue/multi-word-component-names": ["error", {"ignores": ["default", "Header", "Footer", "Modify", "Main", "Result", "Upload", "Test", "Modal"]}]
-    }
-}
+	env: {
+		es2021: true
+	},
+	extends: [
+		'eslint:recommended', 'plugin:vue/vue3-recommended'],
+	rules: {
+		// override/add rules settings here, such as:
+		// 'vue/no-unused-vars': 'error'
+	},
+};

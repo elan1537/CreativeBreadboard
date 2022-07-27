@@ -8,22 +8,25 @@
             id="imageLayer"
             ref="imageLayer"
             :src="uploaded_img"
-            @load="onImageLoad"
             style="z-index: 0"
-          />
+            @load="onImageLoad"
+          >
           <canvas
-            ref="canvas"
             id="cropLayer"
+            ref="canvas"
             style="position: absolute; left: 0; top: 0; z-index: 1"
             @mousemove="onMove"
             @mousedown="onDown"
-          ></canvas>
+          />
         </div>
       </div>
       <div class="col-md-5">
         <div class="row gx-4 gx-lg-5">
           <div class="col">
-            <CardBody :title="title_1" :text="'저항영역을 수정해주세요'">
+            <CardBody
+              :title="title_1"
+              :text="'저항영역을 수정해주세요'"
+            >
               <template #footer>
                 <div class="row">
                   <button
@@ -31,13 +34,12 @@
                     class="btn btn-primary"
                     data-bs-toggle="modal"
                     data-bs-target="#exampleModal2"
-                    @click="setResistorArea"
                   >
                     modify
                   </button>
                   <div
-                    class="modal fade"
                     id="exampleModal2"
+                    class="modal fade"
                     tabindex="-1"
                     aria-labelledby="exampleModalLabel2"
                     aria-hidden="true"
@@ -45,7 +47,10 @@
                     <div class="modal-dialog">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h2 class="modal-title" id="exampleModalLabel2">
+                          <h2
+                            id="exampleModalLabel2"
+                            class="modal-title"
+                          >
                             저항영역을 수정하세요
                           </h2>
                           <button
@@ -53,13 +58,13 @@
                             class="btn-close"
                             data-bs-dismiss="modal"
                             aria-label="Close"
-                          ></button>
+                          />
                         </div>
                         <div class="modal-body">
                           <div
-                            class="row mb-3"
                             v-for="(row, idx) in temp_area_points"
                             :key="`${row}_${idx}`"
+                            class="row mb-3"
                           >
                             <div class="col">
                               {{ row }}
@@ -79,7 +84,7 @@
                             type="button"
                             class="btn btn-primary"
                             data-bs-dismiss="modal"
-                            @click="onResistorAreaSetButton"
+                            @click="setResistorArea"
                           >
                             Save changes
                           </button>
@@ -102,12 +107,15 @@
           width="600"
           height="800"
           alt="..."
-        />
+        >
       </div>
       <div class="col-md-5">
         <div class="row gx-4 gx-lg-5">
           <div class="col">
-            <CardBody :title="title_2" :text="'저항값을 수정해주세요'">
+            <CardBody
+              :title="title_2"
+              :text="'저항값을 수정해주세요'"
+            >
               <template #footer>
                 <div class="row">
                   <button
@@ -115,14 +123,13 @@
                     class="btn btn-primary"
                     data-bs-toggle="modal"
                     data-bs-target="#exampleModal"
-                    @click="setResistorValue"
                   >
                     modify
                   </button>
                   <!-- Modal -->
                   <div
-                    class="modal fade"
                     id="exampleModal"
+                    class="modal fade"
                     tabindex="-1"
                     aria-labelledby="exampleModalLabel"
                     aria-hidden="true"
@@ -130,35 +137,37 @@
                     <div class="modal-dialog">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h2 class="modal-title" id="exampleModalLabel">
+                          <h2
+                            id="exampleModalLabel"
+                            class="modal-title"
+                          >
                             저항값을 입력하세요
                           </h2>
                           <button
                             type="button"
                             class="btn-close"
                             aria-label="Close"
-                          ></button>
+                          />
                         </div>
                         <div class="modal-body">
                           <div
-                            class="row mb-3"
                             v-for="(row, idx) in circuit"
                             :key="`${row}_${idx}`"
+                            class="row mb-3"
                           >
                             <label
                               :for="row['name']"
                               class="col-sm-3 col-form-label"
-                              >{{ row["name"] }}</label
-                            >
+                            >{{ row["name"] }}</label>
                             <div class="col">
                               <input
+                                :id="row['name']"
                                 type="number"
                                 class="form-control"
                                 :placeholder="row['value']"
-                                :id="row['name']"
                                 :value="row['value']"
                                 @input="setResistorValue($event, row['name'])"
-                              />
+                              >
                             </div>
                           </div>
                         </div>
@@ -199,12 +208,20 @@ import axios from "axios";
 
 export default {
   component: { CardBody, ImageModify },
+  components: { CardBody },
   data() {
     return {
-      circuit: "",
+      circuit: [
+        [{ name: "Resistor", value: 1500 }],
+        [
+          { name: "Resistor", value: 2000 },
+          { name: "Resistor", value: 340 },
+        ],
+        [{ name: "Resistor", value: 500 }],
+      ],
       uploaded_img: "",
       title_1: "저항영역 수정하기",
-      title_2: "저항값 수정하기",
+      title_2: "저항값 입력하기",
       scale: null,
       canvas: null,
       context: null,
@@ -220,11 +237,34 @@ export default {
       finalWidth: null,
       finalHeight: null,
       isSetResistorArea: false,
+      detected_components: null,
+      components: null,
     };
   },
   created() {
+    console.log("Created");
+
+    let jsonObj = this.$route.query;
+    console.log(jsonObj.components);
+    console.log(jsonObj === undefined);
+    if (jsonObj !== undefined) {
+      if (jsonObj.components !== undefined) {
+        localStorage.components = jsonObj.components;
+      }
+    }
+
     if (localStorage.circuit_img) {
+      axios({
+        url: "http://localhost:3000/warpedImg",
+        method: "get",
+        headers: { "Content-Type": "application/json" },
+      }).then((response) => {
+        let img_data = response.data["img"];
+        this.uploaded_img = "data:image/jpg;base64," + img_data;
+      });
       this.circuit_img = "data:image/png;base64," + localStorage.circuit_img;
+      this.detected_components = JSON.parse(localStorage.detected_components);
+      this.area_points = this.detected_components.resistor_body;
     } else {
       axios({
         url: "/draw",
@@ -232,14 +272,13 @@ export default {
         headers: { "Content-Type": "multipart/form-data" },
       }).then((response) => {
         let img_data = response.data["circuit"];
-
         localStorage.circuit_img = img_data;
-        this.circuit_img += img_data;
+        this.circuit_img = img_data;
       });
     }
 
     axios({
-      url: "/resistor",
+      url: "http://localhost:3000/resistor",
       method: "get",
       headers: {
         "Content-Type": "application/json",
@@ -259,7 +298,7 @@ export default {
     window.addEventListener("mouseup", this.stopDrag);
     window.addEventListener("keydown", this.onKeydown);
 
-    this.uploaded_img = "data:image/png;base64," + localStorage.origin_img;
+    this.uploaded_img = this.origin_img;
     this.img_tag = this.$refs.imageLayer;
     this.canvas = this.$refs.canvas;
     this.context = this.canvas.getContext("2d");
@@ -278,11 +317,39 @@ export default {
         this.area_points[key] = row;
       });
 
-      localStorage.area_points = JSON.stringify(this.area_points);
       let temp = JSON.parse(localStorage.detected_components);
       temp.resistor_body = this.area_points;
 
       localStorage.detected_components = JSON.stringify(temp);
+
+      axios({
+        method: "post",
+        url: "/area",
+        data: JSON.stringify(this.temp_area_points),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(() => {
+        axios({
+          url: "/draw",
+          method: "get",
+          headers: { "Content-Type": "multipart/form-data" },
+        }).then((response) => {
+          let img_data = "data:image/png;base64," + response.data["circuit"];
+          localStorage.circuit_img = response.data["circuit"];
+          this.circuit_img = img_data;
+          axios({
+            url: "/calc",
+            method: "get",
+            headers: { "Content-Type": "application/json" },
+          }).then((response) => {
+            localStorage.circuit_analysis = JSON.stringify(
+              response.data.circuit_analysis
+            );
+            this.temp_area_points = {};
+          });
+        });
+      });
     },
     setResistorValue(event, name) {
       this.circuit.map((row) => {
@@ -294,7 +361,7 @@ export default {
     onSaveButton() {
       axios({
         method: "post",
-        url: "/resistor",
+        url: "http://localhost:3000/resistor",
         headers: {
           "Content-Type": "application/json",
         },
@@ -324,31 +391,76 @@ export default {
         });
       });
     },
-    onResistorAreaSetButton() {
-      Object.keys(this.temp_area_points).map((key) => {
-        let row = this.temp_area_points[key];
-        this.area_points[key] = row;
-        // localStorage.area_points[key] = row;
-      });
-
-      this.temp_area_points = {};
-    },
     onImageLoad() {
+      console.log("onImageLoad");
       let img = new Image();
       img.src = this.uploaded_img;
       this.scale = localStorage.scale;
-      this.area_points = JSON.parse(localStorage.area_points);
 
       img.onload = () => {
         let width_size = parseInt(img.width * this.scale);
         let height_size = parseInt(img.height * this.scale);
+        let resistor_area = this.detected_components["resistor_body"];
+
+        if (Object.keys(resistor_area).length === 0) return;
+
         this.img_tag.width = width_size + 2;
         this.img_tag.height = height_size + 2;
         this.canvas.width = width_size;
         this.canvas.height = height_size;
 
-        Object.keys(this.area_points).forEach((key) => {
-          let row = this.area_points[key];
+        let components = JSON.parse(localStorage.components);
+        // Resistor
+        Object.keys(components["Resistor"]).forEach((key) => {
+          let row = components["Resistor"][key][0];
+          let start_coord = row.start_coord;
+          let end_coord = row.end_coord;
+          console.log(start_coord[0] * this.scale, start_coord[1] * this.scale);
+          this.context.beginPath();
+          this.context.fillStyle = "red";
+          this.context.font = "20px Arial";
+          this.context.fillText(
+            row.start,
+            start_coord[0] * this.scale,
+            start_coord[1] * this.scale - 20
+          );
+          this.context.arc(
+            start_coord[0] * this.scale,
+            start_coord[1] * this.scale,
+            5,
+            0,
+            Math.PI * 2,
+            true
+          );
+          this.context.fill();
+          this.context.closePath();
+          this.context.beginPath();
+          this.context.fillStyle = "blue";
+          this.context.arc(
+            end_coord[0] * this.scale,
+            end_coord[1] * this.scale,
+            5,
+            0,
+            Math.PI * 2,
+            true
+          );
+          this.context.font = "20px Arial";
+          this.context.fillStyle = "orange";
+          this.context.fillText(
+            row.end,
+            end_coord[0] * this.scale,
+            end_coord[1] * this.scale + 20
+          );
+          this.context.fill();
+          this.context.closePath();
+        });
+
+        Object.keys(components["Line"]).forEach((key) => {
+          console.log(key);
+        });
+
+        Object.keys(resistor_area).forEach((key) => {
+          let row = resistor_area[key];
 
           let [xmin, ymin, xmax, ymax] = [
             row.xmin * this.scale,
@@ -535,6 +647,5 @@ export default {
       }
     },
   },
-  components: { CardBody },
 };
 </script>

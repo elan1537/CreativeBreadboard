@@ -18,24 +18,26 @@ def calcCurrentAndVoltage(V, circuit):
         i0 = []
         for element in level:
             R_voltage1.append(element["value"])
-            i0 = [I * R_vol for R_vol in R_voltage1]
+            level_sum_res = 1 / (sum([1 / R_vol for R_vol in R_voltage1]))
+            i0 = [I * level_sum_res for R_vol in R_voltage1]
         i.append(i0)
     
     return r, I, i
 
 if __name__ == "__main__":
-    V = 5
-    circuit = [
-        [	      
-            {"name": "R10", "value": 3},
-        ],
-        [     
-            {"name": "R21", "value": 2},
-        ], 
-        [
-            {"name": "R30", "value": 6},
-        ],
-    ]
+    V = 10
+    # circuit = [
+    #     [	      
+    #         {"name": "R10", "value": 3},
+    #     ],
+    #     [     
+    #         {"name": "R21", "value": 2},
+    #     ], 
+    #     [
+    #         {"name": "R30", "value": 6},
+    #     ],
+    # ]
+    circuit = [[{'name': 'R1', 'value': 100}], [{'name': 'R2', 'value': 100}, {'name': 'R3', 'value': 100}], [{'name': 'R4', 'value': 100}]]
     R_TH, I, NODE_VOL = calcCurrentAndVoltage(V, circuit)
 
     print(R_TH, I, NODE_VOL)

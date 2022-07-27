@@ -20,3 +20,16 @@
    2. 단, 이 기능은 **스크립트로 다이어그램을 작성**할 수 있는 interface를 가지고 있는 프로그램에 한해서 고려
 3. 웹으로 회로 계층 구조도 표시 (고려사항)
    1. Lexical Analyzer 처럼 트리 형태로 보여주는 방식 생각중
+
+## Server Start(frontend)
+```
+cd frontend
+npm install
+npm run dev
+```
+
+## Server Start(backend)
+```
+cd backend
+python server.py
+```
