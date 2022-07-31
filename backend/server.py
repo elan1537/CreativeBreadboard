@@ -3,7 +3,6 @@ import os, json, cv2
 import numpy as np
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
-from findColor import test
 from findComponents import *
 import requests
 import base64
@@ -281,10 +280,10 @@ def detect():
 
     cv2.imwrite("./target_img.jpg", canvas_image)
     
-    _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image, pts)
-    _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image, pts)
-    _,      linearea_points,      line_area_pd = checkLinearea(target_image, pts)
-    _,   lineendarea_points, line_endarea_pd = checkLineEndArea(target_image, pts)
+    _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image)
+    _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image)
+    _,      linearea_points,      line_area_pd = checkLinearea(target_image)
+    _,   lineendarea_points, line_endarea_pd = checkLineEndArea(target_image)
 
     base_point = np.array(pts, np.float32)
     base_point = base_point.astype(np.float32)
