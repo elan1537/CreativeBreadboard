@@ -12,21 +12,21 @@
 
     <td v-if="click_table[value['name']]">
       <input
+        v-model="detected_line_components[value['name']]['start']"
         type="text"
         class="form-control"
         placeholder="시작점"
         aria-label="시작점"
-        v-model="detected_line_components[value['name']]['start']"
       />
     </td>
 
     <td v-if="click_table[value['name']]">
       <input
+        v-model="detected_line_components[value['name']]['end']"
         type="text"
         class="form-control"
         placeholder="끝점"
         aria-label="끝점"
-        v-model="detected_line_components[value['name']]['end']"
       />
     </td>
 
@@ -40,7 +40,7 @@
 </template>
 <script>
 export default {
-  name: "TableRow",
+  name: "ComponentTableRow",
   props: [],
   data() {
     return {};

@@ -6,36 +6,27 @@
         <ImageModify
           :img_src="image"
           :is-success="false"
-          @sendData="receiveData"
-          @pointCount="checkPointCount"
+          @send-data="receiveData"
+          @point-count="checkPointCount"
         />
       </div>
-      <div
-        class="col-md-5"
-        style="margin-bottom: 100px"
-      >
+      <div class="col-md-5" style="margin-bottom: 100px">
         <form
           action="http://localhost:3000/image"
           method="POST"
           enctype="multipart/form-data"
         >
           <div class="mb-3">
-            <label
-              for="a"
-              class="form-label"
-            >전압 입력</label>
+            <label for="a" class="form-label">전압 입력</label>
             <input
               type="number"
               class="form-control"
               placeholder="V 단위로 입력하세요"
               @input="setVoltage"
-            >
+            />
           </div>
           <div class="mb-3">
-            <label
-              for="formFile"
-              class="form-label"
-            >회로 이미지 입력</label>
+            <label for="formFile" class="form-label">회로 이미지 입력</label>
             <input
               id="file"
               ref="image"
@@ -44,7 +35,7 @@
               type="file"
               accept="image/*"
               @change="uploadImg"
-            >
+            />
           </div>
           <div class="d-grid gap-2">
             <button
@@ -77,6 +68,7 @@ import axios from "axios";
 // import ff from "../../../IMG_5633.txt";
 
 export default {
+  name: "UploadView",
   components: { ImageModify },
   data() {
     return {
@@ -114,56 +106,13 @@ export default {
         this.$router.push({
           name: "Check",
         });
-
-        // let detected_components = response.data.detected_components;
-        // let resistor_body = detected_components.resistor_body;
-
-        // Object.keys(resistor_body).map((key) => {
-        //   resistor_body[key].cbRGB = [
-        //     parseInt(Math.random() * 255),
-        //     parseInt(Math.random() * 255),
-        //     parseInt(Math.random() * 255),
-        //   ];
-        // });
-
-        // localStorage.img = response.data.result_image;
-
-        // localStorage.circuit_img = response.data.circuit;
-
-        // detected_components.resistor_body = resistor_body;
-
-        // let sendObj = {
-        //   img: response.data.result_image,
-        //   origin_img: response.data.warpedImg,
-        //   circuit_img: response.data.circuit_img,
-        //   area_points: JSON.stringify(response.data.area_points),
-        //   circuit_analysis: JSON.stringify(response.data.circuit_analysis),
-        //   detected_components: JSON.stringify(detected_components),
-        //   components: JSON.stringify(response.data.components),
-        //   scale: response.data.scale,
-        // };
-
-        // localStorage.area_points = JSON.stringify(response.data.area_points);
-        // localStorage.circuit_analysis = JSON.stringify(
-        //   response.data.circuit_analysis
-        // );
-        // localStorage.canvas_img = response.data.canvasImage;
-
-        // localStorage.detected_components = JSON.stringify(detected_components);
-        // localStorage.scale = response.data.scale;
-
-        // this.$router.push({
-        //   name: "Modify",
-        //   query: sendObj,
-        // });
       });
     },
-
     setVoltage(event) {
       this.voltage = event.target.value;
     },
     uploadImg() {
-      var image = this.$refs["image"].files[0];
+      const image = this.$refs.image.files[0];
       const url = URL.createObjectURL(image);
       this.image_raw = image;
       this.image = url;
@@ -180,15 +129,15 @@ export default {
         console.log(this.pointCount);
       } else {
         if (this.image_data && this.image && this.voltage) {
-          this.image_data["img_name"] = this.image_raw.name;
-          this.image_data["voltage"] = this.voltage;
-          let points = JSON.stringify(this.image_data);
+          this.image_data.img_name = this.image_raw.name;
+          this.image_data.voltage = this.voltage;
+          const points = JSON.stringify(this.image_data);
           console.log(points);
 
           console.log(this.image_raw);
 
           // file은 json에 포함될 수 없음
-          let data = new FormData();
+          const data = new FormData();
           data.append(
             "image",
             new Blob([this.image_raw], { type: "image/jpeg" })
@@ -201,7 +150,7 @@ export default {
             headers: {
               "Content-Type": "multipart/form-data",
             },
-            data: data,
+            data,
           })
             .then((response) => {
               this.isSuccess = true;

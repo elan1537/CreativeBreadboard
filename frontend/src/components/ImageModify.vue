@@ -4,29 +4,33 @@
       <img
         id="imageLayer"
         ref="imageLayer"
-        :src="img_src"
-        @load="onImageLoad"
+        :src="imgSrc"
         style="z-index: 0"
+        @load="onImageLoad"
       />
       <canvas
-        ref="canvas"
         id="cropLayer"
-        v-on:mousemove="onMouseMove"
-        v-on:mousedown="onMouseDown"
-        v-on:click="onClick"
+        ref="canvas"
         style="position: absolute; left: 0; top: 0; z-index: 1"
+        @mousemove="onMouseMove"
+        @mousedown="onMouseDown"
+        @click="onClick"
       ></canvas>
     </div>
     <div id="result"></div>
   </div>
 </template>
-<style>
-canvas {
-  border: 1px solid black;
-}
-</style>
 <script>
 export default {
+  name: "ComponentImageModify",
+  props: {
+    imgSrc: {
+      type: String,
+      required: true,
+    },
+    isSuccess: Boolean,
+  },
+  emits: ["is-success", "point-count", "send-data"],
   data: function () {
     return {
       SCALE: 0.25,
@@ -41,27 +45,18 @@ export default {
       img_tag: null,
     };
   },
-  props: ["img_src", "isSuccess", "i_width", "i_height"],
   watch: {
     isSuccess: function () {
       if (this.isSuccess === true) {
         this.canvasClear();
-        this.$emit("isSuccess", false);
+        this.$emit("is-success", false);
       }
-    },
-    i_width: function () {
-      console.log(this.i_width);
-    },
-    i_height: function () {
-      console.log(this.i_height);
     },
   },
   mounted() {
     this.img_tag = this.$refs.imageLayer;
     this.canvas = document.getElementById("cropLayer");
     this.context = this.canvas.getContext("2d");
-
-    console.log(this.i_width, this.i_height);
 
     window.addEventListener(
       "keydown",
@@ -71,8 +66,8 @@ export default {
           this.canvasClear();
           this.pointCount = 0;
 
-          this.$emit("pointCount", this.pointCount);
-          this.$emit("sendData", {});
+          this.$emit("point-count", this.pointCount);
+          this.$emit("send-data", {});
         }
       },
       false
@@ -103,7 +98,7 @@ export default {
       if (this.drawState) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         if (this.previousPoint) {
-          if (this.points.length != 0)
+          if (this.points.length !== 0)
             for (let i = 0; i < this.points.length - 1; i++)
               this.draw(this.points[i], this.points[i + 1]);
           this.draw(this.previousPoint, this.startPoint);
@@ -113,19 +108,19 @@ export default {
       }
     },
     onMouseDown(event) {
-      if (event.button == 0) {
+      if (event.button === 0) {
         if (this.pointCount <= 4) {
-          let data = { points: this.points, scale: this.SCALE };
+          const data = { points: this.points, scale: this.SCALE };
           this.pointCount++;
-          this.$emit("pointCount", this.pointCount);
-          this.$emit("sendData", data);
+          this.$emit("point-count", this.pointCount);
+          this.$emit("send-data", data);
           this.previousPoint = this.startPoint;
           this.points.push(this.previousPoint);
         }
       }
     },
     onClick(event) {
-      if (event.button == 0) {
+      if (event.button === 0) {
         if (this.drawState) {
           this.startPoint = [event.offsetX, event.offsetY];
         } else {
@@ -145,15 +140,15 @@ export default {
       }
     },
     onImageLoad() {
-      let img = new Image();
-      img.src = this.img_src;
+      const img = new Image();
+      img.src = this.imgSrc;
       img.onload = () => {
-        let width_size = parseInt(img.width * this.SCALE);
-        let height_size = parseInt(img.height * this.SCALE);
-        this.img_tag.width = width_size + 2;
-        this.img_tag.height = height_size + 2;
-        this.canvas.width = width_size;
-        this.canvas.height = height_size;
+        const widthSize = parseInt(img.width * this.SCALE);
+        const heightSize = parseInt(img.height * this.SCALE);
+        this.img_tag.width = widthSize + 2;
+        this.img_tag.height = heightSize + 2;
+        this.canvas.width = widthSize;
+        this.canvas.height = heightSize;
       };
     },
     refresh() {
@@ -164,3 +159,8 @@ export default {
 };
 // var image_path = "{{ url_for('static', filename='uploads/' + image_path) }}";
 </script>
+<style>
+canvas {
+  border: 1px solid black;
+}
+</style>
