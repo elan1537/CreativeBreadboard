@@ -4,7 +4,7 @@
     <div class="row">
       <div class="col-md-7">
         <ImageModify
-          :img_src="image"
+          :img-src="imageSrc"
           :is-success="false"
           @send-data="receiveData"
           @point-count="checkPointCount"
@@ -29,7 +29,7 @@
             <label for="formFile" class="form-label">회로 이미지 입력</label>
             <input
               id="file"
-              ref="image"
+              ref="circuitImg"
               class="form-control"
               name="file"
               type="file"
@@ -72,12 +72,12 @@ export default {
   components: { ImageModify },
   data() {
     return {
-      image: "",
       points: "",
       scale: "",
-      image_data: "",
-      image_raw: "",
-      pointCount: "",
+      imageData: {},
+      imageSrc: "",
+      circuitImage: "",
+      pointCount: 0,
       voltage: null,
       isSuccess: false,
     };
@@ -112,62 +112,52 @@ export default {
       this.voltage = event.target.value;
     },
     uploadImg() {
-      const image = this.$refs.image.files[0];
-      const url = URL.createObjectURL(image);
-      this.image_raw = image;
-      this.image = url;
+      const image = this.$refs.circuitImg.files[0];
+      this.imageData.img_name = image.name;
+      this.imageData.scale = 0.25;
+      this.circuitImage = new Blob([image], { type: "image/jpeg" });
+      this.imageSrc = URL.createObjectURL(image);
     },
     receiveData(data) {
-      this.image_data = data;
-      this.scale = 0.25;
+      this.imageData = data;
     },
     checkPointCount(p) {
       this.pointCount = p;
+    },
+    afterResponse(response) {
+      this.isSuccess = true;
+
+      localStorage.transformedImg = response.data.transformedImg;
+      localStorage.components = JSON.stringify(response.data.components);
+      localStorage.scale = response.data.scale;
+      localStorage.voltage = response.data.voltage;
+      localStorage.basePoint = JSON.stringify(response.data.basePoint);
+
+      this.$router.push({
+        name: "Check",
+      });
     },
     checkState() {
       if (this.pointCount < 4) {
         console.log(this.pointCount);
       } else {
-        if (this.image_data && this.image && this.voltage) {
-          this.image_data.img_name = this.image_raw.name;
-          this.image_data.voltage = this.voltage;
-          const points = JSON.stringify(this.image_data);
-          console.log(points);
+        if (this.imageData && this.voltage) {
+          this.imageData.voltage = this.voltage;
+          const points = JSON.stringify(this.imageData);
+          const formData = new FormData();
+          console.log(this.imageData);
+          formData.append("points", points);
+          formData.append("circuitImage", this.circuitImage);
 
-          console.log(this.image_raw);
-
-          // file은 json에 포함될 수 없음
-          const data = new FormData();
-          data.append(
-            "image",
-            new Blob([this.image_raw], { type: "image/jpeg" })
-          );
-          data.append("data", new Blob([points], { type: "application/json" }));
-
-          axios({
-            method: "post",
-            url: "http://localhost:3000/image",
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-            data,
-          })
-            .then((response) => {
-              this.isSuccess = true;
-
-              localStorage.transformedImg = response.data.transformedImg;
-              localStorage.components = JSON.stringify(
-                response.data.components
-              );
-              localStorage.scale = response.data.scale;
-              localStorage.voltage = response.data.voltage;
-              localStorage.basePoint = JSON.stringify(response.data.basePoint);
-
-              this.$router.push({
-                name: "Check",
-              });
+          axios
+            .post("http://localhost:3000/image", formData, {
+              headers: { "Content-Type": "multipart/form-data" },
             })
-            .catch((error) => console.log(error));
+            .then((res) => this.afterResponse(res))
+            .catch((error) => {
+              console.log(error.toJSON());
+            });
+
           this.isSuccess = false;
         } else {
           console.log("empty data");

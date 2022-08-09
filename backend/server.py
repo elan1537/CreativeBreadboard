@@ -135,40 +135,40 @@ def image():
     if request.method == 'POST':
         global FILE_IMAGE, V
         PADDING = 0
-
+        target_image = None
+        points = None
+        scale = None
+        
+        if request.files:
+            data = json.loads(request.form['points'])
+            circuitImage = request.files['circuitImage']
+            target_image = cv2.imread(circuitImage, cv2.IMREAD_COLOR)
+            points = data["points"]
+            scale = float(data["scale"])
+            V = int(data["voltage"])
+        
         # 테스트 데이터를 위한 분기
-        if request.get_json() != None:
+        else:
             target_image = cv2.imread("../IMG_5633.JPG", cv2.IMREAD_COLOR)
             points = [[93,29],[99,871],[648,865],[648,27]]
             scale = 0.25
             V = 15
-
-        # 입력된 데이터를 할당하는 작업
-        else:
-            img_file = request.files['image']
-            data = json.load(request.files['data'])
-
-            img_file_bytes = img_file.stream.read()
-            img_arr = np.frombuffer(img_file_bytes, np.uint8)
-            target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-
-            points = data["points"]
-            scale = float(data["scale"])
-            V = int(data["voltage"])
-
+        
         # 전달받은 4개의 포인트는 스케일이 적용되어 있다.
         # 웹에서 포인트를 선택하는 영역은 화면의 크기에 따라 해당하는 점 위치가 다르기 때문에
         # 실제 이미지 크기에 맞게 스케일링을 한다.
         # 현재 scale은 0.25로 고정되어있다.
+        
         pts = []
         for point in points:
             pts.append([int(point[0] / scale), int(point[1] / scale)])
-
+            
         base_point, res = toPerspectiveImage(target_image, np.array(pts), PADDING)
+        cv2.imwrite("./res.jpg", res)
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
-        
+    
         # 해당 부분에서 검출 메소드를 호출한다.
         res = requests.post("http://localhost:3000/detect", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text, 'scale': scale}))
     
