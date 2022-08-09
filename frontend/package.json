@@ -4,11 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-<<<<<<< HEAD
     "dev": "vite dev",
-=======
-    "dev": "vite",
->>>>>>> 9c3e3f44bc4c49b4e87c83059c1076c3d957156e
     "build": "vite build",
     "preview": "vite preview"
   },
