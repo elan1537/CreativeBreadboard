@@ -168,7 +168,7 @@ def image():
 
         _, buffer = cv2.imencode('.jpg', res)
         jpg_as_text = base64.b64encode(buffer).decode()
-    
+        
         # 해당 부분에서 검출 메소드를 호출한다.
         res = requests.post("http://localhost:3000/detect", json=json.dumps({'pts': base_point.tolist(), 'img_res': jpg_as_text, 'scale': scale}))
     

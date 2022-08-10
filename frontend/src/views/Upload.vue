@@ -11,11 +11,7 @@
         />
       </div>
       <div class="col-md-5" style="margin-bottom: 100px">
-        <form
-          action="http://localhost:3000/image"
-          method="POST"
-          enctype="multipart/form-data"
-        >
+        <form>
           <div class="mb-3">
             <label for="a" class="form-label">전압 입력</label>
             <input
