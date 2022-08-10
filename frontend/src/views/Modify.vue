@@ -10,7 +10,7 @@
             :src="uploaded_img"
             style="z-index: 0"
             @load="onImageLoad"
-          >
+          />
           <canvas
             id="cropLayer"
             ref="canvas"
@@ -23,10 +23,7 @@
       <div class="col-md-5">
         <div class="row gx-4 gx-lg-5">
           <div class="col">
-            <CardBody
-              :title="title_1"
-              :text="'저항영역을 수정해주세요'"
-            >
+            <CardBody :title="title_1" :text="'저항영역을 수정해주세요'">
               <template #footer>
                 <div class="row">
                   <button
@@ -47,10 +44,7 @@
                     <div class="modal-dialog">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h2
-                            id="exampleModalLabel2"
-                            class="modal-title"
-                          >
+                          <h2 id="exampleModalLabel2" class="modal-title">
                             저항영역을 수정하세요
                           </h2>
                           <button
@@ -107,15 +101,12 @@
           width="600"
           height="800"
           alt="..."
-        >
+        />
       </div>
       <div class="col-md-5">
         <div class="row gx-4 gx-lg-5">
           <div class="col">
-            <CardBody
-              :title="title_2"
-              :text="'저항값을 수정해주세요'"
-            >
+            <CardBody :title="title_2" :text="'저항값을 수정해주세요'">
               <template #footer>
                 <div class="row">
                   <button
@@ -137,10 +128,7 @@
                     <div class="modal-dialog">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h2
-                            id="exampleModalLabel"
-                            class="modal-title"
-                          >
+                          <h2 id="exampleModalLabel" class="modal-title">
                             저항값을 입력하세요
                           </h2>
                           <button
@@ -158,7 +146,8 @@
                             <label
                               :for="row['name']"
                               class="col-sm-3 col-form-label"
-                            >{{ row["name"] }}</label>
+                              >{{ row["name"] }}</label
+                            >
                             <div class="col">
                               <input
                                 :id="row['name']"
@@ -167,7 +156,7 @@
                                 :placeholder="row['value']"
                                 :value="row['value']"
                                 @input="setResistorValue($event, row['name'])"
-                              >
+                              />
                             </div>
                           </div>
                         </div>
@@ -203,11 +192,10 @@
 </template>
 <script>
 import CardBody from "../components/CardBody.vue";
-import ImageModify from "../components/ImageModify.vue";
 import axios from "axios";
 
 export default {
-  component: { CardBody, ImageModify },
+  name: "ModifyView",
   components: { CardBody },
   data() {
     return {
@@ -244,7 +232,7 @@ export default {
   created() {
     console.log("Created");
 
-    let jsonObj = this.$route.query;
+    const jsonObj = this.$route.query;
     console.log(jsonObj.components);
     console.log(jsonObj === undefined);
     if (jsonObj !== undefined) {
@@ -259,8 +247,8 @@ export default {
         method: "get",
         headers: { "Content-Type": "application/json" },
       }).then((response) => {
-        let img_data = response.data["img"];
-        this.uploaded_img = "data:image/jpg;base64," + img_data;
+        const imgData = response.data.img;
+        this.uploaded_img = "data:image/jpg;base64," + imgData;
       });
       this.circuit_img = "data:image/png;base64," + localStorage.circuit_img;
       this.detected_components = JSON.parse(localStorage.detected_components);
@@ -271,9 +259,9 @@ export default {
         method: "get",
         headers: { "Content-Type": "multipart/form-data" },
       }).then((response) => {
-        let img_data = response.data["circuit"];
-        localStorage.circuit_img = img_data;
-        this.circuit_img = img_data;
+        const imgData = response.data.circuit;
+        localStorage.circuit_img = imgData;
+        this.circuit_img = imgData;
       });
     }
 
@@ -284,14 +272,14 @@ export default {
         "Content-Type": "application/json",
       },
     }).then((response) => {
-      const response_data = response.data.data;
-      let temp_arr = [];
-      for (let i = 0; i < response_data.length; i++) {
-        for (let j = 0; j < response_data[i].length; j++) {
-          temp_arr.push(response_data[i][j]);
+      const responseData = response.data.data;
+      const tempArr = [];
+      for (let i = 0; i < responseData.length; i++) {
+        for (let j = 0; j < responseData[i].length; j++) {
+          tempArr.push(responseData[i][j]);
         }
       }
-      this.circuit = temp_arr;
+      this.circuit = tempArr;
     });
   },
   mounted() {
@@ -305,7 +293,7 @@ export default {
   },
   methods: {
     uploadImg() {
-      var image = this.$refs["image"].files[0];
+      const image = this.$refs.image.files[0];
       const url = URL.createObjectURL(image);
       this.image = url;
     },
@@ -313,11 +301,11 @@ export default {
       if (Object.keys(this.temp_area_points).length === 0) return;
 
       Object.keys(this.temp_area_points).map((key) => {
-        let row = this.temp_area_points[key];
+        const row = this.temp_area_points[key];
         this.area_points[key] = row;
       });
 
-      let temp = JSON.parse(localStorage.detected_components);
+      const temp = JSON.parse(localStorage.detected_components);
       temp.resistor_body = this.area_points;
 
       localStorage.detected_components = JSON.stringify(temp);
@@ -335,9 +323,9 @@ export default {
           method: "get",
           headers: { "Content-Type": "multipart/form-data" },
         }).then((response) => {
-          let img_data = "data:image/png;base64," + response.data["circuit"];
-          localStorage.circuit_img = response.data["circuit"];
-          this.circuit_img = img_data;
+          const imgData = "data:image/png;base64," + response.data.circuit;
+          localStorage.circuit_img = response.data.circuit;
+          this.circuit_img = imgData;
           axios({
             url: "/calc",
             method: "get",
@@ -353,8 +341,8 @@ export default {
     },
     setResistorValue(event, name) {
       this.circuit.map((row) => {
-        if (row["name"] === name) {
-          row["value"] = parseInt(event.target.value);
+        if (row.name === name) {
+          row.value = parseInt(event.target.value);
         }
       });
     },
@@ -372,7 +360,7 @@ export default {
           method: "get",
           headers: { "Content-Type": "multipart/form-data" },
         }).then((response) => {
-          let img_data = response.data["circuit"];
+          const imgData = response.data.circuit;
 
           axios({
             url: "/calc",
@@ -385,48 +373,48 @@ export default {
             );
           });
 
-          localStorage.circuit_img = img_data;
-          this.circuit_img = "data:image/png;base64," + img_data;
+          localStorage.circuit_img = imgData;
+          this.circuit_img = "data:image/png;base64," + imgData;
           // window.location.reload();
         });
       });
     },
     onImageLoad() {
       console.log("onImageLoad");
-      let img = new Image();
+      const img = new Image();
       img.src = this.uploaded_img;
       this.scale = localStorage.scale;
 
       img.onload = () => {
-        let width_size = parseInt(img.width * this.scale);
-        let height_size = parseInt(img.height * this.scale);
-        let resistor_area = this.detected_components["resistor_body"];
+        const widthSize = parseInt(img.width * this.scale);
+        const heightSize = parseInt(img.height * this.scale);
+        const resistorArea = this.detected_components.resistor_body;
 
-        if (Object.keys(resistor_area).length === 0) return;
+        if (Object.keys(resistorArea).length === 0) return;
 
-        this.img_tag.width = width_size + 2;
-        this.img_tag.height = height_size + 2;
-        this.canvas.width = width_size;
-        this.canvas.height = height_size;
+        this.img_tag.width = widthSize + 2;
+        this.img_tag.height = heightSize + 2;
+        this.canvas.width = widthSize;
+        this.canvas.height = heightSize;
 
-        let components = JSON.parse(localStorage.components);
+        const components = JSON.parse(localStorage.components);
         // Resistor
-        Object.keys(components["Resistor"]).forEach((key) => {
-          let row = components["Resistor"][key][0];
-          let start_coord = row.start_coord;
-          let end_coord = row.end_coord;
-          console.log(start_coord[0] * this.scale, start_coord[1] * this.scale);
+        Object.keys(components.Resistor).forEach((key) => {
+          const row = components.Resistor[key][0];
+          const startCoord = row.startCoord;
+          const endCoord = row.endCoord;
+          console.log(startCoord[0] * this.scale, startCoord[1] * this.scale);
           this.context.beginPath();
           this.context.fillStyle = "red";
           this.context.font = "20px Arial";
           this.context.fillText(
             row.start,
-            start_coord[0] * this.scale,
-            start_coord[1] * this.scale - 20
+            startCoord[0] * this.scale,
+            startCoord[1] * this.scale - 20
           );
           this.context.arc(
-            start_coord[0] * this.scale,
-            start_coord[1] * this.scale,
+            startCoord[0] * this.scale,
+            startCoord[1] * this.scale,
             5,
             0,
             Math.PI * 2,
@@ -437,8 +425,8 @@ export default {
           this.context.beginPath();
           this.context.fillStyle = "blue";
           this.context.arc(
-            end_coord[0] * this.scale,
-            end_coord[1] * this.scale,
+            endCoord[0] * this.scale,
+            endCoord[1] * this.scale,
             5,
             0,
             Math.PI * 2,
@@ -448,21 +436,21 @@ export default {
           this.context.fillStyle = "orange";
           this.context.fillText(
             row.end,
-            end_coord[0] * this.scale,
-            end_coord[1] * this.scale + 20
+            endCoord[0] * this.scale,
+            endCoord[1] * this.scale + 20
           );
           this.context.fill();
           this.context.closePath();
         });
 
-        Object.keys(components["Line"]).forEach((key) => {
+        Object.keys(components.Line).forEach((key) => {
           console.log(key);
         });
 
-        Object.keys(resistor_area).forEach((key) => {
-          let row = resistor_area[key];
+        Object.keys(resistorArea).forEach((key) => {
+          const row = resistorArea[key];
 
-          let [xmin, ymin, xmax, ymax] = [
+          const [xmin, ymin, xmax, ymax] = [
             row.xmin * this.scale,
             row.ymin * this.scale,
             row.xmax * this.scale,
@@ -480,11 +468,11 @@ export default {
     },
     drawingAreas(points) {
       Object.keys(points).map((key) => {
-        let row = points[key];
-        let xmin = row.xmin * this.scale;
-        let ymin = row.ymin * this.scale;
-        let xmax = row.xmax * this.scale;
-        let ymax = row.ymax * this.scale;
+        const row = points[key];
+        const xmin = row.xmin * this.scale;
+        const ymin = row.ymin * this.scale;
+        const xmax = row.xmax * this.scale;
+        const ymax = row.ymax * this.scale;
 
         this.context.beginPath();
         this.context.lineWidth = 4;
@@ -498,8 +486,8 @@ export default {
     onMove(event) {
       if (!this.isDraging) return;
 
-      let currentX = event.offsetX;
-      let currentY = event.offsetY;
+      const currentX = event.offsetX;
+      const currentY = event.offsetY;
 
       this.finalWidth = currentX - this.startX;
       this.finalHeight = currentY - this.startY;
@@ -554,39 +542,39 @@ export default {
       lastKey = parseInt(lastKey[lastKey.length - 1]);
       lastKey += 1;
 
-      let x_min = 0;
-      let y_min = 0;
-      let x_max = 0;
-      let y_max = 0;
+      let xmin = 0;
+      let ymin = 0;
+      let xmax = 0;
+      let ymax = 0;
       let wid = 0;
       let hei = 0;
 
-      x_min = this.startX;
-      y_min = this.startY;
-      x_max = this.startX + this.finalWidth;
-      y_max = this.startY + this.finalHeight;
+      xmin = this.startX;
+      ymin = this.startY;
+      xmax = this.startX + this.finalWidth;
+      ymax = this.startY + this.finalHeight;
 
-      let y_dif = y_max - y_min;
+      const yDif = ymax - ymin;
 
-      if (y_dif < 0) {
-        let [t1, t2] = [x_min, y_min];
-        x_min = x_max;
-        y_min = y_max;
-        x_max = t1;
-        y_max = t2;
+      if (yDif < 0) {
+        const [t1, t2] = [xmin, ymin];
+        xmin = xmax;
+        ymin = ymax;
+        xmax = t1;
+        ymax = t2;
       }
 
-      x_min /= this.scale;
-      y_min /= this.scale;
-      x_max /= this.scale;
-      y_max /= this.scale;
+      xmin /= this.scale;
+      ymin /= this.scale;
+      xmax /= this.scale;
+      ymax /= this.scale;
 
       wid = Math.abs(this.finalWidth) / this.scale;
       hei = Math.abs(this.finalHeight) / this.scale;
 
       if (
-        (0 <= this.finalWidth && this.finalWidth <= 30) ||
-        (0 <= this.finalHeight && this.finalHeight <= 30)
+        (this.finalWidth >= 0 && this.finalWidth <= 30) ||
+        (this.finalHeight >= 0 && this.finalHeight <= 30)
       ) {
         console.log("No save");
         this.isDraging = false;
@@ -596,18 +584,18 @@ export default {
         this.finalHeight = null;
         this.finalWidth = null;
       } else {
-        let new_obj = {
-          xmin: x_min,
-          ymin: y_min,
+        const newObj = {
+          xmin,
+          ymin,
           length: hei,
           width: wid,
-          xmax: x_max,
-          ymax: y_max,
+          xmax,
+          ymax,
           confidence: 1.0,
           cbRGB: this.cbRGB,
         };
 
-        this.temp_area_points[lastKey] = new_obj;
+        this.temp_area_points[lastKey] = newObj;
 
         this.isDraging = false;
         this.startX = null;
@@ -631,11 +619,11 @@ export default {
         this.finalWidth = null;
         this.temp_area_points = {};
         Object.keys(this.area_points).map((key) => {
-          let row = this.area_points[key];
-          let xmin = row.xmin * this.scale;
-          let ymin = row.ymin * this.scale;
-          let xmax = row.xmax * this.scale;
-          let ymax = row.ymax * this.scale;
+          const row = this.area_points[key];
+          const xmin = row.xmin * this.scale;
+          const ymin = row.ymin * this.scale;
+          const xmax = row.xmax * this.scale;
+          const ymax = row.ymax * this.scale;
 
           this.context.beginPath();
           this.context.lineWidth = 4;

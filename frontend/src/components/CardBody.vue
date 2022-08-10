@@ -15,6 +15,16 @@
 </template>
 <script>
 export default {
-  props: ["title", "text"],
+  name: "ComponentCardBody",
+  props: {
+    title: {
+      type: String,
+      required: true,
+    },
+    text: {
+      type: String,
+      required: true,
+    },
+  },
 };
 </script>

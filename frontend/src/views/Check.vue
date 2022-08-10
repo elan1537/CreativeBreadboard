@@ -13,7 +13,7 @@
             :src="uploaded_img"
             style="z-index: 0"
             @load="onImageLoad"
-          >
+          />
           <canvas
             id="cropLayer"
             ref="canvas"
@@ -29,21 +29,11 @@
           <table class="table table-hover">
             <thead>
               <tr>
-                <th scope="col">
-                  #
-                </th>
-                <th scope="col">
-                  컴포넌트 이름
-                </th>
-                <th scope="col">
-                  컴포넌트 클래스
-                </th>
-                <th scope="col">
-                  연결핀 1
-                </th>
-                <th scope="col">
-                  연결핀 2
-                </th>
+                <th scope="col">#</th>
+                <th scope="col">컴포넌트 이름</th>
+                <th scope="col">컴포넌트 클래스</th>
+                <th scope="col">연결핀 1</th>
+                <th scope="col">연결핀 2</th>
                 <th scope="col" />
               </tr>
             </thead>
@@ -56,19 +46,9 @@
                 <td>{{ value["name"] }}</td>
 
                 <td v-if="click_table[value['name']]">
-                  <select
-                    class="form-select"
-                    aria-label="클래스"
-                  >
-                    <option
-                      selected
-                      value="1"
-                    >
-                      Line
-                    </option>
-                    <option value="2">
-                      Resistor
-                    </option>
+                  <select class="form-select" aria-label="클래스">
+                    <option selected value="1">Line</option>
+                    <option value="2">Resistor</option>
                   </select>
                 </td>
                 <td v-else>
@@ -82,7 +62,7 @@
                     class="form-control"
                     placeholder="시작점"
                     aria-label="시작점"
-                  >
+                  />
                 </td>
                 <td v-else>
                   {{ value["start"] }}
@@ -95,27 +75,18 @@
                     class="form-control"
                     placeholder="끝점"
                     aria-label="끝점"
-                  >
+                  />
                 </td>
                 <td v-else>
                   {{ value["end"] }}
                 </td>
 
                 <td v-if="click_table[value['name']]">
-                  <div @click="edit_row(value['name'])">
-                    update
-                  </div>
-                  <div @click="click_table[value['name']] = false">
-                    cancel
-                  </div>
+                  <div @click="edit_row(value['name'])">update</div>
+                  <div @click="click_table[value['name']] = false">cancel</div>
                 </td>
 
-                <td
-                  v-else
-                  @click="edit_row(value['name'])"
-                >
-                  edit
-                </td>
+                <td v-else @click="edit_row(value['name'])">edit</td>
               </tr>
               <tr
                 v-for="value in detected_resistor_components"
@@ -125,19 +96,9 @@
                 <td>{{ value["name"] }}</td>
 
                 <td v-if="click_table[value['name']]">
-                  <select
-                    class="form-select"
-                    aria-label="클래스"
-                  >
-                    <option value="1">
-                      Line
-                    </option>
-                    <option
-                      selected
-                      value="2"
-                    >
-                      Resistor
-                    </option>
+                  <select class="form-select" aria-label="클래스">
+                    <option value="1">Line</option>
+                    <option selected value="2">Resistor</option>
                   </select>
                 </td>
                 <td v-else>
@@ -153,7 +114,7 @@
                     class="form-control"
                     placeholder="시작점"
                     aria-label="시작점"
-                  >
+                  />
                 </td>
                 <td v-else>
                   {{ value["start"] }}
@@ -166,45 +127,28 @@
                     class="form-control"
                     placeholder="끝점"
                     aria-label="끝점"
-                  >
+                  />
                 </td>
                 <td v-else>
                   {{ value["end"] }}
                 </td>
 
                 <td v-if="click_table[value['name']]">
-                  <div @click="edit_row(value['name'])">
-                    update
-                  </div>
-                  <div @click="click_table[value['name']] = false">
-                    cancel
-                  </div>
+                  <div @click="edit_row(value['name'])">update</div>
+                  <div @click="click_table[value['name']] = false">cancel</div>
                 </td>
-                <td
-                  v-else
-                  @click="edit_row(value['name'])"
-                >
-                  edit
-                </td>
+                <td v-else @click="edit_row(value['name'])">edit</td>
               </tr>
             </tbody>
           </table>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="addArea"
-          >
+          <button type="button" class="btn btn-primary" @click="addArea">
             영역 추가
           </button>
         </div>
       </div>
     </div>
     <div class="row">
-      <button
-        type="button"
-        class="btn btn-primary"
-        @click="areaCheck"
-      >
+      <button type="button" class="btn btn-primary" @click="areaCheck">
         영역 확인
       </button>
     </div>
@@ -215,6 +159,7 @@ import ImageModify from "../components/ImageModify.vue";
 import axios from "axios";
 
 export default {
+  name: "CheckView",
   component: { ImageModify },
   data() {
     return {
@@ -237,12 +182,12 @@ export default {
   },
   methods: {
     async areaCheck() {
-      let data = localStorage.components;
+      const data = localStorage.components;
 
       await axios({
         url: "http://localhost:3000/network",
         method: "post",
-        data: data,
+        data,
         headers: { "Content-Type": "application/json" },
       }).then(() => {
         axios({
@@ -259,8 +204,8 @@ export default {
           method: "get",
           headers: { "Content-Type": "multipart/form-data" },
         }).then((response) => {
-          let circuitDiagram =
-            "data:image/png;base64," + response.data["circuit"];
+          const circuitDiagram =
+            "data:image/png;base64," + response.data.circuit;
           localStorage.circuitDiagram = circuitDiagram;
 
           this.$router.push({
@@ -274,7 +219,7 @@ export default {
       if (this.click_table[id]) {
         console.log("update!");
 
-        let components = JSON.parse(localStorage.components);
+        const components = JSON.parse(localStorage.components);
         let updatedComponent;
 
         if (id.search("L") !== -1) {
@@ -288,9 +233,9 @@ export default {
             },
             headers: { "Content-Type": "application/json" },
           }).then((response) => {
-            let coord = response.data.coord;
+            const coord = response.data.coord;
             console.log(coord);
-            this.detected_line_components[id]["start_coord"] = coord;
+            this.detected_line_components[id].start_coord = coord;
           });
 
           await axios({
@@ -301,14 +246,14 @@ export default {
             },
             headers: { "Content-Type": "application/json" },
           }).then((response) => {
-            let coord = response.data.coord;
-            this.detected_line_components[id]["end_coord"] = coord;
+            const coord = response.data.coord;
+            this.detected_line_components[id].end_coord = coord;
           });
 
           console.log(this.detected_line_components[id]);
 
-          components["Line"] = this.detected_line_components;
-          console.log(components["Line"][id]);
+          components.Line = this.detected_line_components;
+          console.log(components.Line[id]);
         } else if (id.search("R") !== -1) {
           updatedComponent = this.detected_resistor_components[id];
 
@@ -320,8 +265,8 @@ export default {
             },
             headers: { "Content-Type": "application/json" },
           }).then((response) => {
-            let coord = response.data.coord;
-            this.detected_resistor_components[id]["start_coord"] = coord;
+            const coord = response.data.coord;
+            this.detected_resistor_components[id].start_coord = coord;
           });
 
           await axios({
@@ -332,19 +277,19 @@ export default {
             },
             headers: { "Content-Type": "application/json" },
           }).then((response) => {
-            let coord = response.data.coord;
-            this.detected_resistor_components[id]["end_coord"] = coord;
+            const coord = response.data.coord;
+            this.detected_resistor_components[id].end_coord = coord;
           });
 
-          components["Resistor"] = this.detected_resistor_components;
-          console.log(components["Resistor"][id]);
+          components.Resistor = this.detected_resistor_components;
+          console.log(components.Resistor[id]);
         }
 
         localStorage.components = JSON.stringify(components);
 
-        let line_components = components["Line"];
-        let resistor_components = components["Resistor"];
-        let unknown_components = components["Unknown"];
+        const line_components = components.Line;
+        const resistor_components = components.Resistor;
+        const unknown_components = components.Unknown;
 
         this.context.clearRect(0, 0, 3000, 4000);
         this.set_drawable_area(line_components, "red");
@@ -381,24 +326,24 @@ export default {
     },
     set_drawable_area(component, color) {
       Object.keys(component).forEach((key) => {
-        let row = component[key];
+        const row = component[key];
 
-        let startCoord = [
+        const startCoord = [
           row.start_coord[0] * this.scale,
           row.start_coord[1] * this.scale,
         ];
-        let startPin = row.start;
-        let endCoord = [
+        const startPin = row.start;
+        const endCoord = [
           row.end_coord[0] * this.scale,
           row.end_coord[1] * this.scale,
         ];
-        let endPin = row.end;
+        const endPin = row.end;
 
-        let areaStart = [
+        const areaStart = [
           row.areaStart[0] * this.scale,
           row.areaStart[1] * this.scale,
         ];
-        let areaEnd = [
+        const areaEnd = [
           row.areaEnd[0] * this.scale,
           row.areaEnd[1] * this.scale,
         ];
@@ -464,24 +409,24 @@ export default {
       });
     },
     onImageLoad() {
-      let img = new Image();
+      const img = new Image();
       img.src = this.uploaded_img;
 
       img.onload = () => {
         console.log(img.width, img.height);
-        let width_size = parseInt(img.width * this.scale);
-        let height_size = parseInt(img.height * this.scale);
+        const width_size = parseInt(img.width * this.scale);
+        const height_size = parseInt(img.height * this.scale);
 
         this.img_tag.width = width_size + 2;
         this.img_tag.height = height_size + 2;
         this.canvas.width = width_size;
         this.canvas.height = height_size;
 
-        let components = JSON.parse(localStorage.components);
+        const components = JSON.parse(localStorage.components);
 
-        let line_components = components["Line"];
-        let resistor_components = components["Resistor"];
-        let unknown_components = components["Unknown"];
+        const line_components = components.Line;
+        const resistor_components = components.Resistor;
+        const unknown_components = components.Unknown;
 
         this.detected_line_components = line_components;
         this.detected_resistor_components = resistor_components;
@@ -506,15 +451,17 @@ export default {
         this.set_drawable_area(unknown_components, "green");
       };
     },
-    onClick(event) {console.log(event.offsetX, event.offsetY); },
+    onClick(event) {
+      console.log(event.offsetX, event.offsetY);
+    },
     onMouseDown(event) {
       console.log(event);
     },
     onMouseMove(event) {
       console.log(event);
     },
-    addArea() {this.context.clearRect(0, 0, 4000, 3000)
-
+    addArea() {
+      this.context.clearRect(0, 0, 4000, 3000);
     },
   },
 };

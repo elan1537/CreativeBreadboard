@@ -7,18 +7,14 @@
         <div class="contents">
           <div class="upload-box">
             <div id="drop-file" class="drag-file">
-              <img
-                class="img-fluid rounded mb-4 mb-lg-0"
-                src="jeju.jpg"
-                alt="..."
-              />
+              <img class="img-fluid rounded mb-4 mb-lg-0" src="" alt="..." />
             </div>
             <img src=" " alt=" 회로도 " class="preview" />
           </div>
           <label class="file-label" for="chooseFile">Choose File</label>
           <input
-            class="file"
             id="chooseFile"
+            class="file"
             type="file"
             onchange="dropFile.handleFiles(this.files)"
             accept="image/png, image/jpeg, image/gif"
@@ -31,8 +27,8 @@
     </button>
     <!-- Modal -->
     <div
-      class="modal fade"
       id="staticBackdrop"
+      class="modal fade"
       data-bs-backdrop="static"
       data-bs-keyboard="false"
       tabindex="-1"
@@ -42,7 +38,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="staticBackdropLabel">Modal title</h5>
+            <h5 id="staticBackdropLabel" class="modal-title">Modal title</h5>
             <button
               type="button"
               class="btn-close"
@@ -66,3 +62,8 @@
     </div>
   </div>
 </template>
+<script>
+export default {
+  name: "ComponentImageViewer",
+};
+</script>

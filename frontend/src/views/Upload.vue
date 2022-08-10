@@ -4,47 +4,38 @@
     <div class="row">
       <div class="col-md-7">
         <ImageModify
-          :img_src="image"
+          :img-src="imageSrc"
           :is-success="false"
-          @sendData="receiveData"
-          @pointCount="checkPointCount"
+          @send-data="receiveData"
+          @point-count="checkPointCount"
         />
       </div>
-      <div
-        class="col-md-5"
-        style="margin-bottom: 100px"
-      >
+      <div class="col-md-5" style="margin-bottom: 100px">
         <form
           action="/image"
           method="POST"
           enctype="multipart/form-data"
         >
           <div class="mb-3">
-            <label
-              for="a"
-              class="form-label"
-            >전압 입력</label>
+            <label for="a" class="form-label">전압 입력</label>
             <input
               type="number"
               class="form-control"
               placeholder="V 단위로 입력하세요"
               @input="setVoltage"
-            >
+            />
           </div>
           <div class="mb-3">
-            <label
-              for="formFile"
-              class="form-label"
-            >회로 이미지 입력</label>
+            <label for="formFile" class="form-label">회로 이미지 입력</label>
             <input
               id="file"
-              ref="image"
+              ref="circuitImg"
               class="form-control"
               name="file"
               type="file"
               accept="image/*"
               @change="uploadImg"
-            >
+            />
           </div>
           <div class="d-grid gap-2">
             <button
@@ -77,15 +68,16 @@ import axios from "axios";
 // import ff from "../../../IMG_5633.txt";
 
 export default {
+  name: "UploadView",
   components: { ImageModify },
   data() {
     return {
-      image: "",
       points: "",
       scale: "",
-      image_data: "",
-      image_raw: "",
-      pointCount: "",
+      imageData: {},
+      imageSrc: "",
+      circuitImage: "",
+      pointCount: 0,
       voltage: null,
       isSuccess: false,
     };
@@ -114,111 +106,58 @@ export default {
         this.$router.push({
           name: "Check",
         });
-
-        // let detected_components = response.data.detected_components;
-        // let resistor_body = detected_components.resistor_body;
-
-        // Object.keys(resistor_body).map((key) => {
-        //   resistor_body[key].cbRGB = [
-        //     parseInt(Math.random() * 255),
-        //     parseInt(Math.random() * 255),
-        //     parseInt(Math.random() * 255),
-        //   ];
-        // });
-
-        // localStorage.img = response.data.result_image;
-
-        // localStorage.circuit_img = response.data.circuit;
-
-        // detected_components.resistor_body = resistor_body;
-
-        // let sendObj = {
-        //   img: response.data.result_image,
-        //   origin_img: response.data.warpedImg,
-        //   circuit_img: response.data.circuit_img,
-        //   area_points: JSON.stringify(response.data.area_points),
-        //   circuit_analysis: JSON.stringify(response.data.circuit_analysis),
-        //   detected_components: JSON.stringify(detected_components),
-        //   components: JSON.stringify(response.data.components),
-        //   scale: response.data.scale,
-        // };
-
-        // localStorage.area_points = JSON.stringify(response.data.area_points);
-        // localStorage.circuit_analysis = JSON.stringify(
-        //   response.data.circuit_analysis
-        // );
-        // localStorage.canvas_img = response.data.canvasImage;
-
-        // localStorage.detected_components = JSON.stringify(detected_components);
-        // localStorage.scale = response.data.scale;
-
-        // this.$router.push({
-        //   name: "Modify",
-        //   query: sendObj,
-        // });
       });
     },
-
     setVoltage(event) {
       this.voltage = event.target.value;
     },
     uploadImg() {
-      var image = this.$refs["image"].files[0];
-      const url = URL.createObjectURL(image);
-      this.image_raw = image;
-      this.image = url;
+      const image = this.$refs.circuitImg.files[0];
+      this.imageData.img_name = image.name;
+      this.imageData.scale = 0.25;
+      this.circuitImage = new Blob([image], { type: "image/jpeg" });
+      this.imageSrc = URL.createObjectURL(image);
     },
     receiveData(data) {
-      this.image_data = data;
-      this.scale = 0.25;
+      this.imageData = data;
     },
     checkPointCount(p) {
       this.pointCount = p;
+    },
+    afterResponse(response) {
+      this.isSuccess = true;
+
+      localStorage.transformedImg = response.data.transformedImg;
+      localStorage.components = JSON.stringify(response.data.components);
+      localStorage.scale = response.data.scale;
+      localStorage.voltage = response.data.voltage;
+      localStorage.basePoint = JSON.stringify(response.data.basePoint);
+
+      this.$router.push({
+        name: "Check",
+      });
     },
     checkState() {
       if (this.pointCount < 4) {
         console.log(this.pointCount);
       } else {
-        if (this.image_data && this.image && this.voltage) {
-          this.image_data["img_name"] = this.image_raw.name;
-          this.image_data["voltage"] = this.voltage;
-          let points = JSON.stringify(this.image_data);
-          console.log(points);
+        if (this.imageData && this.voltage) {
+          this.imageData.voltage = this.voltage;
+          const points = JSON.stringify(this.imageData);
+          const formData = new FormData();
+          console.log(this.imageData);
+          formData.append("points", points);
+          formData.append("circuitImage", this.circuitImage);
 
-          console.log(this.image_raw);
-
-          // file은 json에 포함될 수 없음
-          let data = new FormData();
-          data.append(
-            "image",
-            new Blob([this.image_raw], { type: "image/jpeg" })
-          );
-          data.append("data", new Blob([points], { type: "application/json" }));
-
-          axios({
-            method: "post",
-            url: "http://localhost:3000/image",
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-            data: data,
-          })
-            .then((response) => {
-              this.isSuccess = true;
-
-              localStorage.transformedImg = response.data.transformedImg;
-              localStorage.components = JSON.stringify(
-                response.data.components
-              );
-              localStorage.scale = response.data.scale;
-              localStorage.voltage = response.data.voltage;
-              localStorage.basePoint = JSON.stringify(response.data.basePoint);
-
-              this.$router.push({
-                name: "Check",
-              });
+          axios
+            .post("http://localhost:3000/image", formData, {
+              headers: { "Content-Type": "multipart/form-data" },
             })
-            .catch((error) => console.log(error));
+            .then((res) => this.afterResponse(res))
+            .catch((error) => {
+              console.log(error.toJSON());
+            });
+
           this.isSuccess = false;
         } else {
           console.log("empty data");
