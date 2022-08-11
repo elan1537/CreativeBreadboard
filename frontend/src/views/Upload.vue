@@ -63,20 +63,20 @@
   </div>
 </template>
 <script>
-import ImageModify from "../components/ImageModify.vue";
-import axios from "axios";
+import ImageModify from '../components/ImageModify.vue';
+import axios from 'axios';
 // import ff from "../../../IMG_5633.txt";
 
 export default {
-  name: "UploadView",
+  name: 'UploadView',
   components: { ImageModify },
   data() {
     return {
-      points: "",
-      scale: "",
+      points: '',
+      scale: '',
       imageData: {},
-      imageSrc: "",
-      circuitImage: "",
+      imageSrc: '',
+      circuitImage: '',
       pointCount: 0,
       voltage: null,
       isSuccess: false,
@@ -86,15 +86,15 @@ export default {
   methods: {
     sendTestdata() {
       axios({
-        method: "post",
-        url: "http://localhost:3000/image",
+        method: 'post',
+        url: 'http://localhost:3000/image',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         data: JSON.stringify({
-          isTestDataClick: "True",
+          isTestDataClick: 'True',
         }),
-      }).then((response) => {
+      }).then(response => {
         this.isSuccess = true;
 
         localStorage.transformedImg = response.data.transformedImg;
@@ -104,7 +104,7 @@ export default {
         localStorage.basePoint = JSON.stringify(response.data.basePoint);
 
         this.$router.push({
-          name: "Check",
+          name: 'Check',
         });
       });
     },
@@ -115,7 +115,7 @@ export default {
       const image = this.$refs.circuitImg.files[0];
       this.imageData.img_name = image.name;
       this.imageData.scale = 0.25;
-      this.circuitImage = new Blob([image], { type: "image/jpeg" });
+      this.circuitImage = new Blob([image], { type: 'image/jpeg' });
       this.imageSrc = URL.createObjectURL(image);
     },
     receiveData(data) {
@@ -134,7 +134,7 @@ export default {
       localStorage.basePoint = JSON.stringify(response.data.basePoint);
 
       this.$router.push({
-        name: "Check",
+        name: 'Check',
       });
     },
     checkState() {
@@ -146,21 +146,21 @@ export default {
           const points = JSON.stringify(this.imageData);
           const formData = new FormData();
           console.log(this.imageData);
-          formData.append("points", points);
-          formData.append("circuitImage", this.circuitImage);
+          formData.append('points', points);
+          formData.append('circuitImage', this.circuitImage);
 
           axios
-            .post("http://localhost:3000/image", formData, {
-              headers: { "Content-Type": "multipart/form-data" },
+            .post('http://localhost:3000/image', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
             })
-            .then((res) => this.afterResponse(res))
-            .catch((error) => {
+            .then(res => this.afterResponse(res))
+            .catch(error => {
               console.log(error.toJSON());
             });
 
           this.isSuccess = false;
         } else {
-          console.log("empty data");
+          console.log('empty data');
         }
       }
     },
