@@ -97,9 +97,24 @@
                 <td>{{ value['name'] }}</td>
 
                 <td v-if="click_table[value['name']]">
-                  <select class="form-select" aria-label="클래스">
-                    <option value="1">Line</option>
-                    <option selected value="2">Resistor</option>
+                  <select
+                    v-model="
+                      detected_resistor_components[value['name']]['class']
+                    "
+                    class="form-select"
+                    aria-label="클래스"
+                  >
+                    <option
+                      v-for="option in ['Line', 'Resistor']"
+                      :key="option"
+                      :value="option"
+                      :selected="
+                        option ===
+                        detected_resistor_components[value['name']]['class']
+                      "
+                    >
+                      {{ option }}
+                    </option>
                   </select>
                 </td>
                 <td v-else>
@@ -210,9 +225,9 @@ export default {
     return {
       uploaded_img: null,
       scale: null,
-      detected_line_components: null,
-      detected_resistor_components: null,
-      detected_unknown_components: null,
+      detected_line_components: {},
+      detected_resistor_components: {},
+      detected_unknown_components: {},
       click_table: null,
       isAddArea: false,
       isClick: false,
@@ -250,6 +265,34 @@ export default {
     );
   },
   methods: {
+    async call_pinmap(startPin, endPin) {
+      let [coord1, coord2] = [0, 0];
+      await axios
+        .all([
+          axios.get(
+            'http://localhost:3000/pinmap',
+            {
+              params: { pin: startPin },
+            },
+            { headers: { 'Content-Type': 'application/json' } },
+          ),
+          axios.get(
+            'http://localhost:3000/pinmap',
+            {
+              params: { pin: endPin },
+            },
+            { headers: { 'Content-Type': 'application/json' } },
+          ),
+        ])
+        .then(
+          axios.spread((res1, res2) => {
+            coord1 = res1.data.coord;
+            coord2 = res2.data.coord;
+          }),
+        );
+
+      return [coord1, coord2];
+    },
     async areaCheck() {
       const data = localStorage.components;
 
@@ -287,47 +330,60 @@ export default {
       const components = JSON.parse(localStorage.components);
 
       switch (this.new_area.class) {
-        case '1':
-          console.log('Line');
+        case '1': {
           this.new_area.class = 'Line';
 
-          await axios({
-            url: 'http://localhost:3000/pinmap',
-            method: 'get',
-            params: {
-              pin: this.new_area.start,
-            },
-            headers: { 'Content-Type': 'application/json' },
-          }).then(response => {
-            const coord = response.data.coord;
-            this.new_area.start_coord = coord;
-          });
+          // eslint-disable-next-line no-case-declarations
+          const [startCoord, endCoord] = await this.call_pinmap(
+            this.new_area.start,
+            this.new_area.end,
+          );
 
-          await axios({
-            url: 'http://localhost:3000/pinmap',
-            method: 'get',
-            params: {
-              pin: this.new_area.end,
-            },
-            headers: { 'Content-Type': 'application/json' },
-          }).then(response => {
-            const coord = response.data.coord;
-            this.new_area.end_coord = coord;
-          });
+          this.new_area.start_coord = startCoord;
+          this.new_area.end_coord = endCoord;
+
+          console.log(
+            this.new_area.start_coord,
+            this.new_area.end_coord,
+            this.new_area,
+          );
+
+          console.log(this.detected_line_components);
 
           this.detected_line_components[this.new_area.name] = this.new_area;
           components.Line = this.detected_line_components;
           break;
-
-        case '2':
-          console.log('Resistor');
+        }
+        case '2': {
           this.new_area.class = 'Resistor';
+
+          // eslint-disable-next-line no-case-declarations
+          const [startCoord, endCoord] = await this.call_pinmap(
+            this.new_area.start,
+            this.new_area.end,
+          );
+
+          this.new_area.start_coord = startCoord;
+          this.new_area.end_coord = endCoord;
+
           this.detected_resistor_components[this.new_area.name] = this.new_area;
           components.Resistor = this.detected_resistor_components;
           break;
+        }
       }
 
-      this.clearRect(0, 0, 4000, 3000);
+      this.context.clearRect(0, 0, 4000, 3000);
+      this.new_area = {
+        name: '',
+        class: '',
+        start: '',
+        end: '',
+        areaStart: '',
+        start_coord: '',
+        areaEnd: '',
+        end_coord: '',
+      };
+
       this.set_drawable_area(this.detected_line_components, 'red');
       this.set_drawable_area(this.detected_resistor_components, 'blue');
 
@@ -337,9 +393,19 @@ export default {
     },
     cancelArea() {
       this.context.clearRect(0, 0, 4000, 3000);
+      this.new_area = {
+        name: '',
+        class: '',
+        start: '',
+        end: '',
+        areaStart: '',
+        start_coord: '',
+        areaEnd: '',
+        end_coord: '',
+      };
+
       this.set_drawable_area(this.detected_line_components, 'red');
       this.set_drawable_area(this.detected_resistor_components, 'blue');
-      this.set_drawable_area(this.detected_unknown_components, 'green');
       this.isAddArea = false;
     },
 
@@ -385,29 +451,14 @@ export default {
         } else if (id.search('R') !== -1) {
           updatedComponent = this.detected_resistor_components[id];
 
-          await axios({
-            url: 'http://localhost:3000/pinmap',
-            method: 'get',
-            params: {
-              pin: updatedComponent.start,
-            },
-            headers: { 'Content-Type': 'application/json' },
-          }).then(response => {
-            const coord = response.data.coord;
-            this.detected_resistor_components[id].start_coord = coord;
-          });
+          // eslint-disable-next-line no-case-declarations
+          const [startCoord, endCoord] = await this.call_pinmap(
+            updatedComponent.start,
+            updatedComponent.end,
+          );
 
-          await axios({
-            url: 'http://localhost:3000/pinmap',
-            method: 'get',
-            params: {
-              pin: updatedComponent.end,
-            },
-            headers: { 'Content-Type': 'application/json' },
-          }).then(response => {
-            const coord = response.data.coord;
-            this.detected_resistor_components[id].end_coord = coord;
-          });
+          this.detected_resistor_components[id].start_coord = startCoord;
+          this.detected_resistor_components[id].end_coord = endCoord;
 
           components.Resistor = this.detected_resistor_components;
           console.log(components.Resistor[id]);
