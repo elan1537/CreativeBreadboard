@@ -361,6 +361,8 @@ def detect():
             cv2.rectangle(
                 canvas_image, lineareaMinPoint, lineareaMaxPoint, (b, g, r), 10
             )
+    else:
+        components["Line"] = {}
 
     # # 잘못 짜여짐
     # # 전선 영역은 검출되지 않고 전선 꼭지만 검출되거나 영역 관계를 확인하지 못하는 컴포넌트들을
@@ -417,29 +419,38 @@ def findNetwork(components):
 
     start_comp = components[components.start.str.contains("V")]
 
+    print("===================================")
+
     if len(start_comp) >= 2:  # 시작이 만약 2개 이상일 때
         components.drop(index=start_comp.index, inplace=True)
         findNetwork(components)
     else:
         components.drop(index=start_comp.index, inplace=True)
+        components = components.sort_values(by="end_coord")
 
         circuits = pd.concat([circuits, start_comp])
         circuits["layer"] = layer_count
 
         next_point = start_comp
         layer_count += 1
+        
+        print(components)
 
         while not components.empty:
             next_point = next_point.end.to_string(index=False)
             row = next_point[0]
             col = next_point[1:]
 
-            next_point = components[components["start"].str.contains(f"{col}")]
+            next_point = components[
+                components.loc[:, "start"].apply(lambda x: x[1:] == col)
+            ]
 
             components.drop(index=next_point.index, inplace=True)
 
             if next_point.empty:
-                next_point = components[components["start"].str.contains(f"{row}")]
+                next_point = components[
+                    components.loc[:, "start"].apply(lambda x: x[1:] == col)
+                ]
 
             next_point["layer"] = layer_count
             circuits = pd.concat([circuits, next_point], axis=0)
