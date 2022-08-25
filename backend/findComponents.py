@@ -36,15 +36,15 @@ BREADBOARD_ROW_INDEX = range(30)
 
 PADDING = 0
 
-resistor_detect_model = torch.hub.load(
-    "ultralytics/yolov5", "custom", path=MODEL_RESISTORAREA_PATH
-)
-linearea_detect_model = torch.hub.load(
-    "ultralytics/yolov5", "custom", path=MODEL_LINEAREA_PATH
-)
-lineendarea_detect_model = torch.hub.load(
-    "ultralytics/yolov5", "custom", path=MODEL_LINEENDAREA_PATH
-)
+# resistor_detect_model = torch.hub.load(
+#     "ultralytics/yolov5", "custom", path=MODEL_RESISTORAREA_PATH
+# )
+# linearea_detect_model = torch.hub.load(
+#     "ultralytics/yolov5", "custom", path=MODEL_LINEAREA_PATH
+# )
+# lineendarea_detect_model = torch.hub.load(
+#     "ultralytics/yolov5", "custom", path=MODEL_LINEENDAREA_PATH
+# )
 
 
 def toPerspectiveImage(img, points, padding=0):

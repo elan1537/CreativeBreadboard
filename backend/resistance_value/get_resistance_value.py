@@ -3,60 +3,26 @@ from functools import reduce
 from typing import *
 import numpy as np
 import onnxruntime
-from mmcv import Config
-import cv2, torch
+import cv2
+from model_pipeline import LoadDetectionModel
 
 ####################################################
 # config 파일 및 checkpoint 파일 경로
 # 반드시 설정 필요
 ####################################################
-model_path: str = "model/resistor_value_model.onnx"
+RVM_PATH: str = "model/resistor_value_model.onnx"
+RVM_CONF_PATH = "model/mask_rcnn_r50_fpn_1x_coco_resistor_color.py"
 model: onnxruntime = None
 
 ####################################################
-# 416x416x3 크기의 저항 이미지를 주면, 해당 저항값을 반환한다.
-#
 # 최초 실행 시에는 딥러닝 모델을 로드해야 해서 실행이 느리다.
-# 미리 로드하고 싶다면, 아래 load_resistor_color_detection_model을 미리 호출하자.
+# 미리 로드하고 싶다면, 아래 load_detection_model을 미리 호출하자.
 ####################################################
 
 
-def data_pipeline(img: np.ndarray, model_cfg_path: str) -> torch.Tensor:
-    cfg = Config.fromfile(model_cfg_path)
-
-    transforms = None
-    for pipeline in cfg.test_pipeline:
-        if "transforms" in pipeline:
-            transforms = pipeline["transforms"]
-            break
-    assert transforms is not None, "Failed to find `transforms`"
-    norm_config_li = [_ for _ in transforms if _["type"] == "Normalize"]
-    assert len(norm_config_li) == 1, "`norm_config` should only have one"
-    norm_config = norm_config_li[0]
-
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img_scale = (1333, 800)
-    input_shape = (1, 3, img_scale[1], img_scale[0])
-
-    img = cv2.resize(img, input_shape[2:][::-1])
-    mean = np.array(norm_config["mean"], dtype=np.float32)
-    std = np.array(norm_config["std"], dtype=np.float32)
-
-    normalized = (img - mean) / std
-    img = normalized.transpose(2, 0, 1)
-    img = torch.from_numpy(img).unsqueeze(0).float().requires_grad_(True)
-
-    return img.cpu().detach().numpy()
-
-
 def get_resistance_value(img: np.ndarray) -> float:
-    model = load_resistor_color_detection_model()
-
-    model_cfg_path = "model/mask_rcnn_r50_fpn_1x_coco_resistor_color.py"
-    input_arr = data_pipeline(img, model_cfg_path)
-
-    result = (sess_run := model.run([], {"input": input_arr}))[0]
-    categories = sess_run[1][0]
+    model = LoadDetectionModel(RVM_PATH, RVM_CONF_PATH, img)
+    result, categories = model.predict()
 
     bands = result_to_bands(result, categories)
     if len(bands) == 0:
@@ -74,22 +40,9 @@ def get_resistance_value(img: np.ndarray) -> float:
     return colors_to_value(colors)
 
 
-####################################################
-# 저항띠를 추출하는 모델을 로드한다.
-####################################################
-def load_resistor_color_detection_model() -> onnxruntime.InferenceSession:
-    global model
-    global model_path
-
-    if model == None:
-        model = onnxruntime.InferenceSession(model_path)
-
-    return model
-
-
 class ResistorColor(Enum):
     Black = 0
-    Blue = 1
+    Violet = 1  # Blue를 Violet 클래스로 임시 변경함. Blue 데이터가 존재하지 않음
     Brown = 2
     Green = 3
     Orange = 4
@@ -127,22 +80,8 @@ class Band_x:
         self.acc = acc
 
 
-def result_to_bands(
-    # img,
-    result: list,
-    categories: list,
-) -> List[Band_xy]:
+def result_to_bands(result: list, categories: list) -> List[Band_xy]:
     bands = list()
-
-    # color_table = {
-    #     0: (10, 10, 10),
-    #     1: (100, 100, 100),
-    #     2: (255, 100, 198),
-    #     3: (59, 189, 77),
-    #     4: (157, 59, 203),
-    #     5: (200, 210, 50),
-    #     6: (23, 125, 99),
-    # }
 
     for lines in result:
         for line, category in zip(enumerate(lines), categories):
@@ -153,23 +92,10 @@ def result_to_bands(
             y2 = line[3]
             acc = line[4]
 
-            # cv2.rectangle(
-            #     img,
-            #     (int(x1 * (img.shape[1] / 1333)), int(y1 * (img.shape[0] / 800))),
-            #     (int(x2 * (img.shape[1] / 1333)), int(y2 * (img.shape[0] / 800))),
-            #     color_table[category],
-            #     2,
-            # )
-
-            # if acc != 0:
-            #     print(category, [x1, y1, x2, y2, acc])
             bands.append(
                 Band_xy(ResistorColor(category), (x1 + x2) / 2, (y1 + y2) / 2, acc)
             )
 
-    # cv2.imshow("img", img)
-    # cv2.waitKeyEx(0)
-    # cv2.destroyAllWindows()
     return bands
 
 
@@ -276,10 +202,10 @@ def front_color_to_value(color: ResistorColor) -> int:
         ResistorColor.Orange: 3,
         ResistorColor.Yellow: 4,
         ResistorColor.Green: 5,
-        ResistorColor.Blue: 6
-        # ResistorColor.Violet : 7,
-        # ResistorColor.Gray : 8,
-        # ResistorColor.White : 9
+        # ResistorColor.Blue: 6, # Blue를 Violet 클래스로 임시 변경함.
+        ResistorColor.Violet: 7,
+        # ResistorColor.Gray: 8,
+        # ResistorColor.White: 9,
     }
     return value_table.get(color, 0)
 
@@ -292,17 +218,9 @@ def color_to_multiplier(color: ResistorColor) -> float:
         ResistorColor.Orange: 1000,
         ResistorColor.Yellow: 10000,
         ResistorColor.Green: 100000,
-        ResistorColor.Blue: 1000000
-        # ResistorColor.Violet : 10000000,
-        # ResistorColor.Gold   : 0.1,
-        # ResistorColor.Silver : 0.01
+        # ResistorColor.Blue: 1000000, # Blue를 Violet 클래스로 임시 변경함.
+        ResistorColor.Violet: 10000000,
+        # ResistorColor.Gold: 0.1,
+        # ResistorColor.Silver: 0.01,
     }
     return multiplier_table.get(color, 1)
-
-
-if __name__ == "__main__":
-    img_dir = "images/Resistor/resbody-527_jpg.rf.e7ef8bffdf175603fd95b237fb16e9aa.jpg"
-    img = cv2.imread(img_dir, cv2.IMREAD_COLOR)
-
-    ohm = get_resistance_value(img)
-    print(ohm)

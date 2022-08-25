@@ -7,10 +7,11 @@ from findComponents import *
 import requests
 import base64
 from shutil import copy
-from diagram import drawDiagram
-from calcVoltageAndCurrent import calcCurrentAndVoltage
+from data_processing.diagram import drawDiagram
+from data_processing.calcVoltageAndCurrent import calcCurrentAndVoltage
 import tensorflow as tf
 import pandas as pd
+from component_predict import get_component
 
 pd.set_option("mode.chained_assignment", None)
 
@@ -30,7 +31,7 @@ V = 5
 SAVE_PATH = "./static/uploads"
 PROJECT_PATH = "./CreativeBreadboard/images/Circuits"
 
-app = Flask(__name__, static_folder="./static", template_folder="./templates")
+app = Flask(__name__, static_folder="./static")
 app.secret_key = "f#@&v08@#&*fnvn"
 app.permanent_session_lifetime = datetime.timedelta(hours=4)
 
@@ -134,7 +135,7 @@ def image():
     """
     if request.method == "POST":
         global FILE_IMAGE, V
-        PADDING = 0
+        PADDING = 200
         target_image = None
         points = None
         scale = None
@@ -279,17 +280,44 @@ def detect():
     jpg_original = base64.b64decode(img_res)
     img_arr = np.frombuffer(jpg_original, np.uint8)
     target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+    # img_shape = target_image.shape[:-1]
+
+    # max_length = max(img_shape)
+
+    # y_ = max_length - img_shape[0]
+    # x_ = max_length - img_shape[1]
+
+    # print(x_, y_)
+
+    # target_image = cv2.copyMakeBorder(
+    #     target_image,
+    #     top=int(y_ / 2),
+    #     bottom=int(y_ / 2),
+    #     left=int(x_ / 2),
+    #     right=int(x_ / 2),
+    #     borderType=cv2.BORDER_CONSTANT,
+    #     value=[0, 0, 0],
+    # )
+
+    # target_image = cv2.resize(target_image, (640, 640))
     canvas_image = target_image.copy()
 
     cv2.imwrite("./target_img.jpg", canvas_image)
 
-    _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image)
-    _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image)
-    _, linearea_points, line_area_pd = checkLinearea(target_image)
-    _, lineendarea_points, line_endarea_pd = checkLineEndArea(target_image)
+    result_dataframe = get_component(target_image)
+    resistor_area_pd = processDataFrame(result_dataframe, "resistor-area", 0.6)
+    resistor_body_pd = processDataFrame(result_dataframe, "resistor-body", 0.6)
+    line_area_pd = processDataFrame(result_dataframe, "line-area", 0.6)
+    line_endarea_pd = processDataFrame(result_dataframe, "line-endpoint", 0.6)
+
+    # _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image)
+    # _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image)
+    # _, linearea_points, line_area_pd = checkLinearea(target_image)
+    # _, lineendarea_points, line_endarea_pd = checkLineEndArea(target_image)
+
+    print(result_dataframe)
 
     base_point = np.array(pts, np.float32)
-    base_point = base_point.astype(np.float32)
     transform_mtrx = cv2.getPerspectiveTransform(start_point, base_point)
 
     initializePinmaps(
@@ -433,7 +461,7 @@ def findNetwork(components):
 
         next_point = start_comp
         layer_count += 1
-        
+
         print(components)
 
         while not components.empty:
