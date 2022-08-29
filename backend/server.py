@@ -142,8 +142,10 @@ def image():
 
         if request.files:
             data = json.loads(request.form["points"])
-            circuitImage = request.files["circuitImage"]
-            target_image = cv2.imread(circuitImage, cv2.IMREAD_COLOR)
+            circuitImage = request.files["circuitImage"].read()
+            target_image = cv2.imdecode(
+                np.frombuffer(circuitImage, np.uint8), cv2.IMREAD_COLOR
+            )
             points = data["points"]
             scale = float(data["scale"])
             V = int(data["voltage"])
@@ -280,42 +282,15 @@ def detect():
     jpg_original = base64.b64decode(img_res)
     img_arr = np.frombuffer(jpg_original, np.uint8)
     target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-    # img_shape = target_image.shape[:-1]
 
-    # max_length = max(img_shape)
-
-    # y_ = max_length - img_shape[0]
-    # x_ = max_length - img_shape[1]
-
-    # print(x_, y_)
-
-    # target_image = cv2.copyMakeBorder(
-    #     target_image,
-    #     top=int(y_ / 2),
-    #     bottom=int(y_ / 2),
-    #     left=int(x_ / 2),
-    #     right=int(x_ / 2),
-    #     borderType=cv2.BORDER_CONSTANT,
-    #     value=[0, 0, 0],
-    # )
-
-    # target_image = cv2.resize(target_image, (640, 640))
     canvas_image = target_image.copy()
 
     cv2.imwrite("./target_img.jpg", canvas_image)
 
-    result_dataframe = get_component(target_image)
-    resistor_area_pd = processDataFrame(result_dataframe, "resistor-area", 0.6)
-    resistor_body_pd = processDataFrame(result_dataframe, "resistor-body", 0.6)
-    line_area_pd = processDataFrame(result_dataframe, "line-area", 0.6)
-    line_endarea_pd = processDataFrame(result_dataframe, "line-endpoint", 0.6)
-
-    # _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image)
-    # _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image)
-    # _, linearea_points, line_area_pd = checkLinearea(target_image)
-    # _, lineendarea_points, line_endarea_pd = checkLineEndArea(target_image)
-
-    print(result_dataframe)
+    _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image)
+    _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image)
+    _, linearea_points, line_area_pd = checkLinearea(target_image)
+    _, lineendarea_points, line_endarea_pd = checkLineEndArea(target_image)
 
     base_point = np.array(pts, np.float32)
     transform_mtrx = cv2.getPerspectiveTransform(start_point, base_point)
