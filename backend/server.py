@@ -166,28 +166,31 @@ def image():
         for point in points:
             pts.append([int(point[0] / scale), int(point[1] / scale)])
 
-        base_point, res = toPerspectiveImage(target_image, np.array(pts), PADDING)
-        cv2.imwrite("./res.jpg", res)
+        base_point, target_image = toPerspectiveImage(
+            target_image, np.array(pts), PADDING
+        )
+        cv2.imwrite("./target_image.jpg", target_image)
 
-        _, buffer = cv2.imencode(".jpg", res)
-        jpg_as_text = base64.b64encode(buffer).decode()
+        _, buffer = cv2.imencode(".jpg", target_image)
+        transformedImg_base64 = base64.b64encode(buffer).decode()
 
         # 해당 부분에서 검출 메소드를 호출한다.
-        res = requests.post(
-            "http://localhost:3000/detect",
-            json=json.dumps(
-                {"pts": base_point.tolist(), "img_res": jpg_as_text, "scale": scale}
-            ),
-        )
+        # res = requests.post(
+        #     "http://localhost:3000/detect",
+        #     json=json.dumps(
+        #         {"pts": base_point.tolist(), "img_res": jpg_as_text, "scale": scale}
+        #     ),
+        # )
+        component = detect(pts=base_point, target_image=target_image, scale=scale)
 
-        components = res.json()
+        # components = res.json()
 
         result_data = {
-            "transformedImg": jpg_as_text,
+            "transformedImg": transformedImg_base64,
             "basePoint": base_point.tolist(),
             "voltage": V,
             "scale": 0.25,
-            "components": components["components"],
+            "components": component["components"],
         }
 
         return jsonify(result_data)
@@ -265,23 +268,23 @@ def network():
         return jsonify({"network": table})
 
 
-@app.route("/detect", methods=["POST"])
-def detect():
+# @app.route("/detect", methods=["POST"])
+def detect(pts: np.ndarray, target_image: np.ndarray, scale: float):
     """
     전달받은 이미지 데이터에서 전기소자를 예측하고 그것의 위치를 찾는다.
     """
     # 이미지 프로세싱
-    global circuit_component_data, vol_pinmap, body_pinmap, start_point
+    global circuit_component_data, vol_pinmap, body_pinmap, start_point, find_pincoords_resi_model, find_pincoords_line_model
 
     init()  # 검출을 위해 데이터 초기화 및 모델 로딩(로딩이 되어있지 않다면)
 
-    data = json.loads(request.get_json())
-    pts = data["pts"]
-    img_res = data["img_res"]
-    scale = data["scale"]
-    jpg_original = base64.b64decode(img_res)
-    img_arr = np.frombuffer(jpg_original, np.uint8)
-    target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+    # data = json.loads(request.get_json())
+    # pts = data["pts"]
+    # img_res = data["img_res"]
+    # scale = data["scale"]
+    # jpg_original = base64.b64decode(img_res)
+    # img_arr = np.frombuffer(jpg_original, np.uint8)
+    # target_image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
 
     canvas_image = target_image.copy()
 
@@ -367,53 +370,57 @@ def detect():
     else:
         components["Line"] = {}
 
-    # # 잘못 짜여짐
-    # # 전선 영역은 검출되지 않고 전선 꼭지만 검출되거나 영역 관계를 확인하지 못하는 컴포넌트들을
-    # # 따로 담아두고 웹에서 보정하게끔 해야함
-    # if len(line_endarea_pd) > 0:
-    #     for lineEndAreaIdx in range(len(line_endarea_pd)):
-    #         r = int(random.random() * 255)
-    #         g = int(random.random() * 255)
-    #         b = int(random.random() * 255)
+    """
+    # 잘못 짜여짐
+    # 전선 영역은 검출되지 않고 전선 꼭지만 검출되거나 영역 관계를 확인하지 못하는 컴포넌트들을
+    # 따로 담아두고 웹에서 보정하게끔 해야함
+    if len(line_endarea_pd) > 0:
+        for lineEndAreaIdx in range(len(line_endarea_pd)):
+            r = int(random.random() * 255)
+            g = int(random.random() * 255)
+            b = int(random.random() * 255)
 
-    #         linearea = line_endarea_pd.iloc[lineEndAreaIdx]
+            linearea = line_endarea_pd.iloc[lineEndAreaIdx]
 
-    #         lineareaMinPoint = [round(linearea.xmin) - 30, round(linearea.ymin) - 30]
-    #         lineareaMaxPoint = [round(linearea.xmax) + 30, round(linearea.ymax) + 30]
+            lineareaMinPoint = [round(linearea.xmin) - 30, round(linearea.ymin) - 30]
+            lineareaMaxPoint = [round(linearea.xmax) + 30, round(linearea.ymax) + 30]
 
-    #         if lineareaMinPoint[0] < 0:
-    #             lineareaMinPoint[0] = 0
-    #         if lineareaMinPoint[1] < 0:
-    #             lineareaMinPoint[1] = 0
+            if lineareaMinPoint[0] < 0:
+                lineareaMinPoint[0] = 0
+            if lineareaMinPoint[1] < 0:
+                lineareaMinPoint[1] = 0
 
-    #         expand_to = 350
+            expand_to = 350
 
-    #         area_start, area_end, area = area_padding(target_image, lineareaMinPoint, lineareaMaxPoint, base_point[0], base_point[2], expand_to, True)
-    #         table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
-    #         normalized = imgNormalizing(area, scale_to=227)
+            area_start, area_end, area = area_padding(target_image, lineareaMinPoint, lineareaMaxPoint, base_point[0], base_point[2], expand_to, True)
+            table_idx = findCandidateCoords(area_start, area_end, body_pinmap, vol_pinmap)
+            normalized = imgNormalizing(area, scale_to=227)
 
-    #         coords = getXYPinCoords(find_pincoords_line_model, normalized)
+            coords = getXYPinCoords(find_pincoords_line_model, normalized)
 
-    #         pt1 = round(coords[0]), round(coords[1])
-    #         pt1 = translate(pt1, 227, expand_to, area_start)
-    #         x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)
+            pt1 = round(coords[0]), round(coords[1])
+            pt1 = translate(pt1, 227, expand_to, area_start)
+            x1, y1, pin1 = getPinCoords(search_map, table_idx, pt1, area_start)
 
-    #         components["Unknown"].append({
-    #             "class": "LineEnd",
-    #             "name": f"LE{lineEndAreaIdx}",
-    #             "coord": [x1 + area_start[0], y1 + area_start[1]],
-    #             "pin": pin1
-    #         })
+            components["Unknown"].append({
+                "class": "LineEnd",
+                "name": f"LE{lineEndAreaIdx}",
+                "coord": [x1 + area_start[0], y1 + area_start[1]],
+                "pin": pin1
+            })
 
-    #         cv2.putText(canvas_image, f"lineendarea#{lineEndAreaIdx}", (lineareaMinPoint[0], lineareaMinPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
-    #         cv2.rectangle(canvas_image, lineareaMinPoint, lineareaMaxPoint, (b, g, r), 10)
-    #         cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
-    #         cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (255, 0, 255), cv2.FILLED)
+            cv2.putText(canvas_image, f"lineendarea#{lineEndAreaIdx}", (lineareaMinPoint[0], lineareaMinPoint[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+            cv2.rectangle(canvas_image, lineareaMinPoint, lineareaMaxPoint, (b, g, r), 10)
+            cv2.putText(canvas_image, pin1, (x1 + area_start[0], y1 + area_start[1]+30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 255), 2)
+            cv2.circle(canvas_image, (x1 + area_start[0], y1 + area_start[1]), 20, (255, 0, 255), cv2.FILLED)
+            
+    """
 
     cv2.imwrite("target_img.jpg", target_image)
     cv2.imwrite("canvas_image.jpg", canvas_image)
 
-    return jsonify({"components": components})
+    # return jsonify({"components": components})
+    return {"components": components}
 
 
 def findNetwork(components):
@@ -469,7 +476,7 @@ def findNetwork(components):
 
 
 def init():
-    global body_pinmap, vol_pinmap, pinmap, pinmap_shape, start_point, find_pincoords_resi_model, find_pincoords_line_model
+    global body_pinmap, vol_pinmap, pinmap, pinmap_shape, start_point
 
     PADDING = 0
 
@@ -489,6 +496,9 @@ def init():
         dtype=np.float32,
     )
 
+
+def model_loading():
+    global find_pincoords_resi_model, find_pincoords_line_model
     if find_pincoords_resi_model is None:
         print("resi 모델 생성")
         find_pincoords_resi_model = tf.keras.models.load_model(
@@ -503,4 +513,5 @@ def init():
 
 
 if __name__ == "__main__":
+    model_loading()
     app.run(debug=False, use_reloader=True, host="0.0.0.0", port=3000)
