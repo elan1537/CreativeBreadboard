@@ -5,11 +5,6 @@ import torch
 import pandas as pd
 import math
 
-MODEL_RESISTORAREA_PATH = "../model/resistor-area.model.pt"
-MODEL_RESISTORBODY_PATH = "../model/resistor.body.pt"
-MODEL_LINEAREA_PATH = "../model/line-area.model.pt"
-MODEL_LINEENDAREA_PATH = "../model/line-endpoint.model.pt"
-
 BREADBOARD_COL_INDEX = [
     "A",
     "A",
@@ -35,16 +30,6 @@ BREADBOARD_COL_INDEX = [
 BREADBOARD_ROW_INDEX = range(30)
 
 PADDING = 0
-
-resistor_detect_model = torch.hub.load(
-    "ultralytics/yolov5", "custom", path=MODEL_RESISTORAREA_PATH
-)
-linearea_detect_model = torch.hub.load(
-    "ultralytics/yolov5", "custom", path=MODEL_LINEAREA_PATH
-)
-lineendarea_detect_model = torch.hub.load(
-    "ultralytics/yolov5", "custom", path=MODEL_LINEENDAREA_PATH
-)
 
 
 def toPerspectiveImage(img, points, padding=0):
@@ -231,91 +216,16 @@ def processDataFrame(origin_data, column_name, confidence=0.1):
         return pd.DataFrame({})
 
 
-def checkLinearea(target):
-    """
-    전선 영역을 검출한다.
-    """
-    global linearea_detect_model
+def detectArea(model, name: str, target: np.ndarray, confidence: float):
+    detected_area = pd.DataFrame(model(target).pandas().xyxy[0])
+    print("detected_area: ", len(detected_area))
 
-    if linearea_detect_model is None:
-        linearea_detect_model = torch.hub.load(
-            "ultralytics/yolov5", "custom", path=MODEL_LINEAREA_PATH
-        )
-
-    detect_area = pd.DataFrame(linearea_detect_model(target).pandas().xyxy[0])
-
-    print("checkLinearea", len(detect_area))
-
-    # confidence 기준 0.5이하로 하면 검출되지 않는 영역이 있음
-    # 해당 부분 처리를 위함
-    if len(detect_area) > 0:
-        line_area = processDataFrame(detect_area, "line-area", 0.5)
+    if len(detected_area) > 0:
+        detected_area = processDataFrame(detected_area, name, confidence)
     else:
-        line_area = {}
+        detected_area = {}
 
-    return target, line_area.transpose().to_json(), line_area
-
-
-def checkLineEndArea(target):
-    """
-    전선 꼭지 영역을 검출한다.
-    """
-    global lineendarea_detect_model
-
-    if lineendarea_detect_model is None:
-        lineendarea_detect_model = torch.hub.load(
-            "ultralytics/yolov5", "custom", path=MODEL_LINEAREA_PATH
-        )
-
-    detect_area = pd.DataFrame(lineendarea_detect_model(target).pandas().xyxy[0])
-
-    print("checkLineEndArea", len(detect_area))
-
-    line_end_area = processDataFrame(detect_area, "line-endpoint", 0.5)
-
-    return target, line_end_area.transpose().to_json(), line_end_area
-
-
-def checkResistorArea(target):
-    """
-    저항 영역을 검출한다.
-    """
-    """ Resistor DataFrame 처리 """
-    global resistor_detect_model
-
-    if resistor_detect_model is None:
-        resistor_detect_model = torch.hub.load(
-            "ultralytics/yolov5", "custom", path=MODEL_RESISTORAREA_PATH
-        )
-
-    detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
-
-    print("checkResistorArea", len(detect_area))
-
-    resistor_area = processDataFrame(detect_area, "resistor-area", 0.5)
-
-    return target, resistor_area.transpose().to_json(), resistor_area
-
-
-def checkResistorBody(target):
-    """
-    저항값이 담긴 영역을 검출한다.
-    """
-    """ Resistor DataFrame 처리 """
-    global resistor_detect_model
-
-    if resistor_detect_model is None:
-        resistor_detect_model = torch.hub.load(
-            "ultralytics/yolov5", "custom", path=MODEL_RESISTORAREA_PATH
-        )
-
-    detect_area = pd.DataFrame(resistor_detect_model(target).pandas().xyxy[0])
-
-    print("checkResistorBody", len(detect_area))
-
-    resistor_body = processDataFrame(detect_area, "resistor-body", 0.5)
-
-    return target, resistor_body.transpose().to_json(), resistor_body
+    return detected_area
 
 
 def findCandidateCoords(area_start, area_end, bodymap, volmap):
@@ -958,3 +868,84 @@ def line_contains_table(line_area, line_endarea):
                     key_table[j] = i
 
     return key_table
+
+
+class findNetworkException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return self.value
+
+
+def findNetwork(components: pd.DataFrame):
+    circuits = pd.DataFrame()
+    layer_count = 0
+
+    try:
+        start_comp = components[components.start.str.contains("V")]
+
+        if len(start_comp) == 0:
+            raise findNetworkException("+ 전압에서 시작되는 전기소자가 존재하지 않음")
+
+        if len(start_comp) >= 2:  # 시작이 만약 2개 이상일 때
+            components.drop(index=start_comp.index, inplace=True)
+            raise findNetworkException("임시에러, 시작점이 2개임")
+
+        else:
+            components.drop(index=start_comp.index, inplace=True)
+            components = components.sort_values(by="end_coord")
+
+            circuits = pd.concat([circuits, start_comp])
+            circuits.loc[start_comp.name, "layer"] = layer_count
+
+            next_point = start_comp
+            layer_count += 1
+
+            total_components = len(components)
+            check_comp_count = 0
+
+            while check_comp_count != total_components:
+                next_point = next_point.end.to_string(index=False)
+                row = next_point[0]
+                col = next_point[1:]
+
+                next_point = components[
+                    components.loc[:, "start"].apply(lambda x: x[1:] == col)
+                ]
+                components.drop(index=next_point.index, inplace=True)
+
+                next_point["layer"] = layer_count
+                circuits = pd.concat([circuits, next_point], axis=0)
+
+                if len(next_point) > 1:
+                    next_point = next_point.iloc[[0]]
+                    # -> 또 검색 해야함..
+                    # 만약 병렬된 곳에서 타고타고 들어갈 수도..
+
+                layer_count += 1
+                check_comp_count += 1
+
+            if len(components) != 0:
+                err_comp_name = []
+                t = circuits.loc[:, ["name", "start", "end"]]
+
+                for comp_name, component in components.iterrows():
+                    # print(
+                    #     t[
+                    #         (t["start"].str[1:] == component["start"][1:])
+                    #         | (t["end"].str[1:] == component["end"][1:])
+                    #     ]
+                    # )
+
+                    err_comp_name.append(comp_name)
+
+                raise findNetworkException(f"잘못 연결된 전기소자, {','.join(err_comp_name)}")
+
+            if circuits.iloc[[-1]]["end"][0][0] != "V":
+                raise findNetworkException(f"회로가 - 전원에 연결되지 않음")
+
+            return circuits
+
+    except findNetworkException as findNetworkEx:
+        return {"message": str(findNetworkEx)}

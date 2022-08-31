@@ -1,17 +1,22 @@
 import datetime
 import os, json, cv2
+import requests
+import base64
+import time
 import numpy as np
+import tensorflow as tf
+import pandas as pd
+import pickle
+
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from findComponents import *
-import requests
-import base64
 from shutil import copy
 from data_processing.diagram import drawDiagram
 from data_processing.calcVoltageAndCurrent import calcCurrentAndVoltage
-import tensorflow as tf
-import pandas as pd
 from component_predict import get_component
+from tqdm import tqdm
+
 
 pd.set_option("mode.chained_assignment", None)
 
@@ -28,8 +33,10 @@ find_pincoords_line_model = None
 V = 5
 # PADDING = 0
 
-SAVE_PATH = "./static/uploads"
-PROJECT_PATH = "./CreativeBreadboard/images/Circuits"
+MODEL_RESISTORAREA_PATH = "../model/resistor-area.model.pt"
+MODEL_RESISTORBODY_PATH = "../model/resistor.body.pt"
+MODEL_LINEAREA_PATH = "../model/line-area.model.pt"
+MODEL_LINEENDAREA_PATH = "../model/line-endpoint.model.pt"
 
 app = Flask(__name__, static_folder="./static")
 app.secret_key = "f#@&v08@#&*fnvn"
@@ -38,6 +45,7 @@ app.permanent_session_lifetime = datetime.timedelta(hours=4)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 FILE_IMAGE = None
+models = {}
 
 
 @app.route("/")
@@ -181,7 +189,11 @@ def image():
         #         {"pts": base_point.tolist(), "img_res": jpg_as_text, "scale": scale}
         #     ),
         # )
-        component = detect(pts=base_point, target_image=target_image, scale=scale)
+        component = detect(
+            pts=base_point,
+            target_image=target_image,
+            scale=scale,
+        )
 
         # components = res.json()
 
@@ -290,10 +302,16 @@ def detect(pts: np.ndarray, target_image: np.ndarray, scale: float):
 
     cv2.imwrite("./target_img.jpg", canvas_image)
 
-    _, resistor_area_points, resistor_area_pd = checkResistorArea(target_image)
-    _, resistor_body_points, resistor_body_pd = checkResistorBody(target_image)
-    _, linearea_points, line_area_pd = checkLinearea(target_image)
-    _, lineendarea_points, line_endarea_pd = checkLineEndArea(target_image)
+    resistor_area_pd = detectArea(
+        models["resistor.area"], "resistor-area", target_image, 0.5
+    )
+    resistor_body_pd = detectArea(
+        models["resistor.body"], "resistor-body", target_image, 0.5
+    )
+    line_area_pd = detectArea(models["line.area"], "line-area", target_image, 0.5)
+    line_endarea_pd = detectArea(
+        models["line.endpoint"], "line-endpoint", target_image, 0.5
+    )
 
     base_point = np.array(pts, np.float32)
     transform_mtrx = cv2.getPerspectiveTransform(start_point, base_point)
@@ -320,7 +338,7 @@ def detect(pts: np.ndarray, target_image: np.ndarray, scale: float):
         canvas_image,
         body_pinmap,
         vol_pinmap,
-        find_pincoords_resi_model,
+        models["resistor.pin"],
     )
     components["Resistor"] = detected_resistor_components
 
@@ -340,7 +358,7 @@ def detect(pts: np.ndarray, target_image: np.ndarray, scale: float):
             canvas_image,
             body_pinmap,
             vol_pinmap,
-            find_pincoords_line_model,
+            models["line.pin"],
         )
         components["Line"] = detected_line_components["Line"]
         components["Unknown"] = detected_line_components["Unknown"]
@@ -423,58 +441,6 @@ def detect(pts: np.ndarray, target_image: np.ndarray, scale: float):
     return {"components": components}
 
 
-def findNetwork(components):
-    circuits = pd.DataFrame()
-    layer_count = 0
-
-    start_comp = components[components.start.str.contains("V")]
-
-    print("===================================")
-
-    if len(start_comp) >= 2:  # 시작이 만약 2개 이상일 때
-        components.drop(index=start_comp.index, inplace=True)
-        findNetwork(components)
-    else:
-        components.drop(index=start_comp.index, inplace=True)
-        components = components.sort_values(by="end_coord")
-
-        circuits = pd.concat([circuits, start_comp])
-        circuits["layer"] = layer_count
-
-        next_point = start_comp
-        layer_count += 1
-
-        print(components)
-
-        while not components.empty:
-            next_point = next_point.end.to_string(index=False)
-            row = next_point[0]
-            col = next_point[1:]
-
-            next_point = components[
-                components.loc[:, "start"].apply(lambda x: x[1:] == col)
-            ]
-
-            components.drop(index=next_point.index, inplace=True)
-
-            if next_point.empty:
-                next_point = components[
-                    components.loc[:, "start"].apply(lambda x: x[1:] == col)
-                ]
-
-            next_point["layer"] = layer_count
-            circuits = pd.concat([circuits, next_point], axis=0)
-
-            if len(next_point) > 1:
-                next_point = next_point.iloc[[0]]
-                # -> 또 검색 해야함..
-                # 만약 병렬된 곳에서 타고타고 들어갈 수도..
-
-            layer_count += 1
-
-    return circuits
-
-
 def init():
     global body_pinmap, vol_pinmap, pinmap, pinmap_shape, start_point
 
@@ -498,20 +464,49 @@ def init():
 
 
 def model_loading():
-    global find_pincoords_resi_model, find_pincoords_line_model
-    if find_pincoords_resi_model is None:
-        print("resi 모델 생성")
-        find_pincoords_resi_model = tf.keras.models.load_model(
-            "../model/ResNet152V2.h5"
-        )
+    global models
+    print("Init...")
 
-    if find_pincoords_line_model is None:
-        print("line 모델 생성")
-        find_pincoords_line_model = tf.keras.models.load_model(
-            "../model/findCoordinLineEnd.h5"
-        )
+    with tqdm(total=6) as pbar:
+        keys = [
+            "resistor.area",
+            "resistor.body",
+            "line.area",
+            "line.endpoint",
+            "resistor.pin",
+            "line.pin",
+        ]
+
+        model_paths = [
+            MODEL_RESISTORAREA_PATH,
+            MODEL_RESISTORBODY_PATH,
+            MODEL_LINEAREA_PATH,
+            MODEL_LINEENDAREA_PATH,
+            "../model/ResNet152V2.h5",
+            "../model/findCoordinLineEnd.h5",
+        ]
+
+        for key, model_path in zip(keys[:4], model_paths[:4]):
+            print(key, "모델 생성 중")
+            start = time.process_time()
+            models[key] = torch.hub.load(
+                "ultralytics/yolov5", "custom", path=model_path
+            )
+            end = time.process_time()
+            print(key, "모델 생성 완료,", end - start)
+            pbar.update(1)
+
+        with tf.device("/cpu:0"):
+            for key, model_path in zip(keys[4:], model_paths[4:]):
+                print(key, "모델 생성 중")
+                start = time.process_time()
+                models[key] = tf.keras.models.load_model(model_path)
+                end = time.process_time()
+                print(key, "모델 생성 완료,", end - start)
+                pbar.update(1)
 
 
 if __name__ == "__main__":
+    tf.config.set_visible_devices([], "GPU")
     model_loading()
-    app.run(debug=False, use_reloader=True, host="0.0.0.0", port=3000)
+    app.run(debug=True, host="0.0.0.0", port=3000)
