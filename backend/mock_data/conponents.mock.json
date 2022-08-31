@@ -1,0 +1,691 @@
+{
+    "IMG_5633.JPG": {
+        "meta": {
+            "points": [
+                [
+                    84,
+                    27
+                ],
+                [
+                    91,
+                    874
+                ],
+                [
+                    651,
+                    872
+                ],
+                [
+                    649,
+                    26
+                ]
+            ],
+            "scale": 0.25,
+            "voltage": "33"
+        },
+        "components": {
+            "Resistor": {
+                "R0": {
+                    "class": "Resistor",
+                    "name": "R0",
+                    "start": "J2",
+                    "end": "J6",
+                    "start_coord": [
+                        1903,
+                        497
+                    ],
+                    "end_coord": [
+                        1901,
+                        913
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1876,
+                        417
+                    ],
+                    "areaEnd": [
+                        2085,
+                        970
+                    ]
+                },
+                "R1": {
+                    "class": "Resistor",
+                    "name": "R1",
+                    "start": "H6",
+                    "end": "H10",
+                    "start_coord": [
+                        1690,
+                        914
+                    ],
+                    "end_coord": [
+                        1689,
+                        1333
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1656,
+                        832
+                    ],
+                    "areaEnd": [
+                        1842,
+                        1372
+                    ]
+                },
+                "R2": {
+                    "class": "Resistor",
+                    "name": "R2",
+                    "start": "G9",
+                    "end": "G14",
+                    "start_coord": [
+                        1584,
+                        1229
+                    ],
+                    "end_coord": [
+                        1583,
+                        1746
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1523,
+                        1219
+                    ],
+                    "areaEnd": [
+                        1680,
+                        1758
+                    ]
+                },
+                "R3": {
+                    "class": "Resistor",
+                    "name": "R3",
+                    "start": "J10",
+                    "end": "J14",
+                    "start_coord": [
+                        1900,
+                        1332
+                    ],
+                    "end_coord": [
+                        1899,
+                        1746
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1866,
+                        1282
+                    ],
+                    "areaEnd": [
+                        2141,
+                        1785
+                    ]
+                }
+            },
+            "Unknown": [],
+            "Line": {
+                "L0": {
+                    "class": "Line",
+                    "name": "L0",
+                    "areaStart": [
+                        320,
+                        167
+                    ],
+                    "areaEnd": [
+                        1620,
+                        2001
+                    ],
+                    "end": "G2",
+                    "end_coord": [
+                        1585,
+                        497
+                    ],
+                    "end_endAreaStart": [
+                        1412,
+                        325
+                    ],
+                    "end_endAreaEnd": [
+                        1592,
+                        518
+                    ],
+                    "start": "V213",
+                    "start_coord": [
+                        457,
+                        1899
+                    ],
+                    "start_endAreaStart": [
+                        337,
+                        1778
+                    ],
+                    "start_endAreaEnd": [
+                        514,
+                        1945
+                    ]
+                },
+                "L1": {
+                    "class": "Line",
+                    "name": "L1",
+                    "areaStart": [
+                        1012,
+                        1677
+                    ],
+                    "areaEnd": [
+                        2283,
+                        3576
+                    ],
+                    "start": "F14",
+                    "start_coord": [
+                        1477,
+                        1746
+                    ],
+                    "start_endAreaStart": [
+                        1346,
+                        1642
+                    ],
+                    "start_endAreaEnd": [
+                        1532,
+                        1794
+                    ],
+                    "end": "V325",
+                    "end_coord": [
+                        2201,
+                        3356
+                    ],
+                    "end_endAreaStart": [
+                        2075,
+                        3283
+                    ],
+                    "end_endAreaEnd": [
+                        2265,
+                        3437
+                    ]
+                }
+            }
+        }
+    },
+    "IMG_5632.jpeg": {
+        "meta": {
+            "points": [
+                [
+                    76,
+                    60
+                ],
+                [
+                    92,
+                    884
+                ],
+                [
+                    640,
+                    880
+                ],
+                [
+                    632,
+                    47
+                ]
+            ],
+            "scale": 0.25,
+            "voltage": "32"
+        },
+        "components": {
+            "Resistor": {
+                "R0": {
+                    "class": "Resistor",
+                    "name": "R0",
+                    "start": "F6",
+                    "end": "F10",
+                    "start_coord": [
+                        1458,
+                        902
+                    ],
+                    "end_coord": [
+                        1458,
+                        1313
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1360,
+                        813
+                    ],
+                    "areaEnd": [
+                        1520,
+                        1324
+                    ]
+                },
+                "R1": {
+                    "class": "Resistor",
+                    "name": "R1",
+                    "start": "J2",
+                    "end": "J6",
+                    "start_coord": [
+                        1876,
+                        492
+                    ],
+                    "end_coord": [
+                        1874,
+                        901
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1841,
+                        455
+                    ],
+                    "areaEnd": [
+                        2077,
+                        951
+                    ]
+                },
+                "R2": {
+                    "class": "Resistor",
+                    "name": "R2",
+                    "start": "I6",
+                    "end": "I10",
+                    "start_coord": [
+                        1770,
+                        902
+                    ],
+                    "end_coord": [
+                        1769,
+                        1314
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1666,
+                        878
+                    ],
+                    "areaEnd": [
+                        1854,
+                        1339
+                    ]
+                },
+                "R3": {
+                    "class": "Resistor",
+                    "name": "R3",
+                    "start": "J10",
+                    "end": "J14",
+                    "start_coord": [
+                        1873,
+                        1313
+                    ],
+                    "end_coord": [
+                        1872,
+                        1720
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1824,
+                        1236
+                    ],
+                    "areaEnd": [
+                        1999,
+                        1755
+                    ]
+                }
+            },
+            "Unknown": [],
+            "Line": {
+                "L0": {
+                    "class": "Line",
+                    "name": "L0",
+                    "areaStart": [
+                        264,
+                        198
+                    ],
+                    "areaEnd": [
+                        1588,
+                        2013
+                    ],
+                    "end": "F2",
+                    "end_coord": [
+                        1459,
+                        495
+                    ],
+                    "end_endAreaStart": [
+                        1385,
+                        358
+                    ],
+                    "end_endAreaEnd": [
+                        1555,
+                        536
+                    ],
+                    "start": "V213",
+                    "start_coord": [
+                        453,
+                        1871
+                    ],
+                    "start_endAreaStart": [
+                        323,
+                        1767
+                    ],
+                    "start_endAreaEnd": [
+                        508,
+                        1932
+                    ]
+                },
+                "L1": {
+                    "class": "Line",
+                    "name": "L1",
+                    "areaStart": [
+                        1015,
+                        1603
+                    ],
+                    "areaEnd": [
+                        2289,
+                        3544
+                    ],
+                    "start": "F14",
+                    "start_coord": [
+                        1457,
+                        1720
+                    ],
+                    "start_endAreaStart": [
+                        1376,
+                        1624
+                    ],
+                    "start_endAreaEnd": [
+                        1541,
+                        1760
+                    ],
+                    "end": "V325",
+                    "end_coord": [
+                        2169,
+                        3304
+                    ],
+                    "end_endAreaStart": [
+                        2037,
+                        3226
+                    ],
+                    "end_endAreaEnd": [
+                        2225,
+                        3390
+                    ]
+                }
+            }
+        }
+    },
+    "IMG_5615.jpeg": {
+        "meta": {
+            "points": [
+                [
+                    141,
+                    109
+                ],
+                [
+                    153,
+                    869
+                ],
+                [
+                    656,
+                    858
+                ],
+                [
+                    652,
+                    103
+                ]
+            ],
+            "scale": 0.25,
+            "voltage": "15"
+        },
+        "components": {
+            "Resistor": {
+                "R0": {
+                    "class": "Resistor",
+                    "name": "R0",
+                    "start": "F10",
+                    "end": "F14",
+                    "start_coord": [
+                        1356,
+                        1215
+                    ],
+                    "end_coord": [
+                        1355,
+                        1587
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1283,
+                        1205
+                    ],
+                    "areaEnd": [
+                        1449,
+                        1603
+                    ]
+                },
+                "R1": {
+                    "class": "Resistor",
+                    "name": "R1",
+                    "start": "H14",
+                    "end": "J18",
+                    "start_coord": [
+                        1546,
+                        1587
+                    ],
+                    "end_coord": [
+                        1736,
+                        1956
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1511,
+                        1530
+                    ],
+                    "areaEnd": [
+                        1791,
+                        1982
+                    ]
+                },
+                "R2": {
+                    "class": "Resistor",
+                    "name": "R2",
+                    "start": "G18",
+                    "end": "F22",
+                    "start_coord": [
+                        1451,
+                        1957
+                    ],
+                    "end_coord": [
+                        1355,
+                        2329
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1342,
+                        1904
+                    ],
+                    "areaEnd": [
+                        1521,
+                        2356
+                    ]
+                }
+            },
+            "Unknown": [],
+            "Line": {
+                "L0": {
+                    "class": "Line",
+                    "name": "L0",
+                    "areaStart": [
+                        354,
+                        292
+                    ],
+                    "areaEnd": [
+                        1966,
+                        1308
+                    ],
+                    "start": "V24",
+                    "start_coord": [
+                        428,
+                        696
+                    ],
+                    "start_endAreaStart": [
+                        374,
+                        574
+                    ],
+                    "start_endAreaEnd": [
+                        536,
+                        731
+                    ],
+                    "end": "J10",
+                    "end_coord": [
+                        1737,
+                        1215
+                    ],
+                    "end_endAreaStart": [
+                        1678,
+                        1090
+                    ],
+                    "end_endAreaEnd": [
+                        1915,
+                        1269
+                    ]
+                }
+            }
+        }
+    },
+    "IMG_5627.jpeg": {
+        "meta": {
+            "points": [
+                [
+                    108,
+                    126
+                ],
+                [
+                    106,
+                    874
+                ],
+                [
+                    606,
+                    890
+                ],
+                [
+                    627,
+                    125
+                ]
+            ],
+            "scale": 0.25,
+            "voltage": "27"
+        },
+        "components": {
+            "Resistor": {
+                "R0": {
+                    "class": "Resistor",
+                    "name": "R0",
+                    "start": "F6",
+                    "end": "F9",
+                    "start_coord": [
+                        1374,
+                        845
+                    ],
+                    "end_coord": [
+                        1374,
+                        1130
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1347,
+                        774
+                    ],
+                    "areaEnd": [
+                        1498,
+                        1235
+                    ]
+                },
+                "R1": {
+                    "class": "Resistor",
+                    "name": "R1",
+                    "start": "J2",
+                    "end": "J6",
+                    "start_coord": [
+                        1764,
+                        468
+                    ],
+                    "end_coord": [
+                        1762,
+                        844
+                    ],
+                    "value": 100,
+                    "areaStart": [
+                        1698,
+                        442
+                    ],
+                    "areaEnd": [
+                        1853,
+                        865
+                    ]
+                }
+            },
+            "Unknown": [],
+            "Line": {
+                "L0": {
+                    "class": "Line",
+                    "name": "L0",
+                    "areaStart": [
+                        371,
+                        302
+                    ],
+                    "areaEnd": [
+                        1466,
+                        1926
+                    ],
+                    "start": "F2",
+                    "start_coord": [
+                        1375,
+                        471
+                    ],
+                    "start_endAreaStart": [
+                        1263,
+                        386
+                    ],
+                    "start_endAreaEnd": [
+                        1431,
+                        517
+                    ],
+                    "end": "V214",
+                    "end_coord": [
+                        437,
+                        1827
+                    ],
+                    "end_endAreaStart": [
+                        330,
+                        1696
+                    ],
+                    "end_endAreaEnd": [
+                        502,
+                        1846
+                    ]
+                },
+                "L1": {
+                    "class": "Line",
+                    "name": "L1",
+                    "areaStart": [
+                        826,
+                        1525
+                    ],
+                    "areaEnd": [
+                        2117,
+                        3403
+                    ],
+                    "start": "F14",
+                    "start_coord": [
+                        1373,
+                        1596
+                    ],
+                    "start_endAreaStart": [
+                        1275,
+                        1529
+                    ],
+                    "start_endAreaEnd": [
+                        1433,
+                        1659
+                    ],
+                    "end": "V325",
+                    "end_coord": [
+                        2038,
+                        3051
+                    ],
+                    "end_endAreaStart": [
+                        1886,
+                        2967
+                    ],
+                    "end_endAreaEnd": [
+                        2086,
+                        3166
+                    ]
+                }
+            }
+        }
+    }
+}
