@@ -6,6 +6,8 @@ node_modules
 *.jpg
 *.jpeg
 *.JPG
+!mock_data/*.jpeg
+!mock_data/*.JPG
 *.h5
 *.pt
 
