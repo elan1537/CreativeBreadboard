@@ -8,6 +8,7 @@ import tensorflow as tf
 import pandas as pd
 import pickle
 import io
+import argparse
 
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
@@ -232,4 +233,9 @@ def calc():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=3000)
+    parser = argparse.ArgumentParser(description="서버 시작")
+    parser.add_argument("--debug", default=False)
+    parser.add_argument("--port", default=7080)
+    args = parser.parse_args()
+
+    app.run(debug=args.debug, host="0.0.0.0", port=args.port)
