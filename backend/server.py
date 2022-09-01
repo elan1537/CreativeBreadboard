@@ -6,7 +6,8 @@ import time
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-import pickle
+import argparse
+import io
 
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
@@ -39,8 +40,10 @@ MODEL_LINEAREA_PATH = "../model/line-area.model.pt"
 MODEL_LINEENDAREA_PATH = "../model/line-endpoint.model.pt"
 
 app = Flask(__name__, static_folder="./static")
+app.config["JSON_AS_ASCII"] = False
 app.secret_key = "f#@&v08@#&*fnvn"
 app.permanent_session_lifetime = datetime.timedelta(hours=4)
+
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -71,24 +74,30 @@ def pinmap():
     col = None
     search_pin = request.args.get("pin")
 
-    assert search_pin != None
-    assert search_pin[0] in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "V"]
+    try:
+        assert search_pin != None
+        assert search_pin[0] in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "V"]
 
-    if search_pin[0] == "V":
-        assert int(search_pin[2:]) >= 1 and int(search_pin[2:]) <= 25
-        row, col = int(search_pin[2:]) - 1, search_pin[:2]
-    else:
-        assert int(search_pin[1:]) >= 1 and int(search_pin[1:]) <= 30
-        row, col = int(search_pin[1:]) - 1, search_pin[0]
+        search_map = pd.concat(
+            [vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1
+        )
 
-    search_map = pd.concat(
-        [vol_pinmap.iloc[:, 0:4], body_pinmap, vol_pinmap.iloc[:, 4:8]], axis=1
-    )
+        if search_pin[0] == "V":
+            assert int(search_pin[2:]) >= 1 and int(search_pin[2:]) <= 25
+            row, col = int(search_pin[2:]) - 1, search_pin[:2]
+        else:
+            assert int(search_pin[1:]) >= 1 and int(search_pin[1:]) <= 30
+            row, col = int(search_pin[1:]) - 1, search_pin[0]
 
-    print(search_map)
-    x, y = search_map.xs(row)[col]["x"], search_map.xs(row)[col]["y"]
+        x, y = search_map.xs(row)[col]["x"], search_map.xs(row)[col]["y"]
 
-    return jsonify({"coord": [x, y]})
+        return jsonify({"coord": [x, y]})
+
+    except AttributeError as e:
+        return jsonify({"message": "회로 이미지를 먼저 업로드하세요"})
+
+    except AssertionError:
+        return jsonify({"message": "유효한 브레드보드 핀 범위가 아님. (V11(V101)~V425, A1(A01)~J25)"})
 
 
 @app.route("/resistor", methods=["GET", "POST"])
@@ -127,11 +136,19 @@ def draw():
     회로 다이어그램 그림을 반환함
     """
     if request.method == "GET":
-        print(circuit_component_data)
-        image_bytes = drawDiagram(V, circuit_component_data)
-        return jsonify(
-            {"state": "success", "circuit": base64.b64encode(image_bytes).decode()}
-        )
+        global circuit_component_data
+        try:
+            image_bytes = drawDiagram(V, circuit_component_data)
+            # return jsonify(
+            #     {"state": "success", "circuit": base64.b64encode(image_bytes).decode()}
+            # )
+            return send_file(
+                io.BytesIO(image_bytes),
+                mimetype="image/jpeg",
+                attachment_filename="circuitDiagram.jpeg",
+            )
+        except Exception:
+            return jsonify({"message": "회로 이미지를 먼저 업로드하세요"})
 
 
 @app.route("/image", methods=["POST"])
@@ -142,70 +159,89 @@ def image():
 
     """
     if request.method == "POST":
-        global FILE_IMAGE, V
-        PADDING = 200
-        target_image = None
-        points = None
-        scale = None
+        try:
+            global FILE_IMAGE, V
+            PADDING = 200
+            target_image = None
+            points = None
+            scale = None
 
-        if request.files:
-            data = json.loads(request.form["points"])
-            circuitImage = request.files["circuitImage"].read()
-            target_image = cv2.imdecode(
-                np.frombuffer(circuitImage, np.uint8), cv2.IMREAD_COLOR
+            if request.files:
+                circuitImage = request.files["circuitImage"].read()
+                target_image = cv2.imdecode(
+                    np.frombuffer(circuitImage, np.uint8), cv2.IMREAD_COLOR
+                )
+
+            # 테스트 데이터를 위한 분기
+            else:
+                raise Exception("회로 이미지를 전송하지 않음")
+
+            if request.form["points"]:
+                data = json.loads(request.form["points"])
+
+                if data.get("points") and len(data["points"]) == 4:
+                    points = data["points"]
+                else:
+                    raise Exception("이미지 필수 정보 (브레드보드 꼭짓점)이 전달되지 않음")
+
+                if data.get("scale"):
+                    scale = float(data["scale"])
+                else:
+                    raise Exception("이미지 필수 정보 (스케일)이 전달되지 않음")
+
+                if data.get("voltage"):
+                    V = int(data["voltage"])
+                else:
+                    raise Exception("이미지 필수 정보 (전압)이 전달되지 않음")
+
+                # target_image = cv2.imread("../IMG_5633.JPG", cv2.IMREAD_COLOR)
+                # points = [[93, 29], [99, 871], [648, 865], [648, 27]]
+                # scale = 0.25
+                # V = 15
+
+            # 전달받은 4개의 포인트는 스케일이 적용되어 있다.
+            # 웹에서 포인트를 선택하는 영역은 화면의 크기에 따라 해당하는 점 위치가 다르기 때문에
+            # 실제 이미지 크기에 맞게 스케일링을 한다.
+            # 현재 scale은 0.25로 고정되어있다.
+
+            pts = []
+            for point in points:
+                pts.append([int(point[0] / scale), int(point[1] / scale)])
+
+            base_point, target_image = toPerspectiveImage(
+                target_image, np.array(pts), PADDING
             )
-            points = data["points"]
-            scale = float(data["scale"])
-            V = int(data["voltage"])
+            cv2.imwrite("./target_image.jpg", target_image)
 
-        # 테스트 데이터를 위한 분기
-        else:
-            target_image = cv2.imread("../IMG_5633.JPG", cv2.IMREAD_COLOR)
-            points = [[93, 29], [99, 871], [648, 865], [648, 27]]
-            scale = 0.25
-            V = 15
+            _, buffer = cv2.imencode(".jpg", target_image)
+            transformedImg_base64 = base64.b64encode(buffer).decode()
 
-        # 전달받은 4개의 포인트는 스케일이 적용되어 있다.
-        # 웹에서 포인트를 선택하는 영역은 화면의 크기에 따라 해당하는 점 위치가 다르기 때문에
-        # 실제 이미지 크기에 맞게 스케일링을 한다.
-        # 현재 scale은 0.25로 고정되어있다.
+            # 해당 부분에서 검출 메소드를 호출한다.
+            # res = requests.post(
+            #     "http://localhost:3000/detect",
+            #     json=json.dumps(
+            #         {"pts": base_point.tolist(), "img_res": jpg_as_text, "scale": scale}
+            #     ),
+            # )
+            component = detect(
+                pts=base_point,
+                target_image=target_image,
+                scale=scale,
+            )
 
-        pts = []
-        for point in points:
-            pts.append([int(point[0] / scale), int(point[1] / scale)])
+            # components = res.json()
 
-        base_point, target_image = toPerspectiveImage(
-            target_image, np.array(pts), PADDING
-        )
-        cv2.imwrite("./target_image.jpg", target_image)
+            result_data = {
+                "transformedImg": transformedImg_base64,
+                "basePoint": base_point.tolist(),
+                "voltage": V,
+                "scale": 0.25,
+                "components": component["components"],
+            }
 
-        _, buffer = cv2.imencode(".jpg", target_image)
-        transformedImg_base64 = base64.b64encode(buffer).decode()
-
-        # 해당 부분에서 검출 메소드를 호출한다.
-        # res = requests.post(
-        #     "http://localhost:3000/detect",
-        #     json=json.dumps(
-        #         {"pts": base_point.tolist(), "img_res": jpg_as_text, "scale": scale}
-        #     ),
-        # )
-        component = detect(
-            pts=base_point,
-            target_image=target_image,
-            scale=scale,
-        )
-
-        # components = res.json()
-
-        result_data = {
-            "transformedImg": transformedImg_base64,
-            "basePoint": base_point.tolist(),
-            "voltage": V,
-            "scale": 0.25,
-            "components": component["components"],
-        }
-
-        return jsonify(result_data)
+            return jsonify(result_data)
+        except Exception as e:
+            return jsonify({"message": str(e)})
 
 
 @app.route("/calc", methods=["get"])
@@ -214,6 +250,13 @@ def calc():
     분석된 회로에서의 이론적인 노드 전압과 출력 전류 그리고 합성저항값을 반환받는다.
     """
     global circuit_component_data
+
+    if circuit_component_data is None:
+        return jsonify({"message": "회로 사진을 먼저 업로드하세요"})
+
+    if V is None:
+        return jsonify({"message": "전압값이 지정되어있지 않음"})
+
     R_TH, I, NODE_VOL = calcCurrentAndVoltage(V, circuit_component_data)
 
     return jsonify(
@@ -241,8 +284,6 @@ def network():
 
         components = pd.concat([lines, resistors], axis=1).transpose()
 
-        print(components)
-
         """
             일단 지금은 사용자가 모든 핀을 정상적으로 오류를 캐치했을 때를 가정하고 네트워크를 구성하고 있음
             추가적으로 네트워크를 찾다가 잘못된 부분을 alert 하는거 구현해야함.
@@ -256,7 +297,8 @@ def network():
         # 아래의 코드는 위에서 계층을 찾으면 그걸 토대로 저항소자만 빼오는 코드
         # 위 데이터의 결과는 [[{'name': 'R0', 'value': 100}], [{'name': 'R1', 'value': 100}], [{'name': 'R2', 'value': 100}, {'name': 'R3', 'value': 100}]]
 
-        print(circuit)
+        if isinstance(circuit, dict):
+            return jsonify({"message": circuit["message"]})
 
         table = {}
 
@@ -278,6 +320,12 @@ def network():
         circuit_component_data = table
 
         return jsonify({"network": table})
+
+    if request.method == "GET":
+        if circuit_component_data is not None:
+            return jsonify({"network": circuit_component_data})
+        else:
+            return jsonify({"message": "회로 이미지를 먼저 업로드하세요"})
 
 
 # @app.route("/detect", methods=["POST"])
@@ -507,6 +555,11 @@ def model_loading():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="서버 시작")
+    parser.add_argument("--debug", default=False)
+    parser.add_argument("--port", default=7080)
+    args = parser.parse_args()
+
     tf.config.set_visible_devices([], "GPU")
     model_loading()
-    app.run(debug=True, host="0.0.0.0", port=3000)
+    app.run(debug=args.debug, host="0.0.0.0", port=args.port)

@@ -42,59 +42,75 @@ def main():
 @app.route("/image/<data_type>", methods=["POST"])
 def image(data_type: int):
     if request.method == "POST":
-        global V, body_pinmap, vol_pinmap, circuit_component_data
-        PADDING = 200
-        target_image = None
-        points = None
-        scale = None
-        dummy = None
+        try:
+            global V, body_pinmap, vol_pinmap, circuit_component_data
+            PADDING = 200
+            target_image = None
+            points = None
+            scale = None
+            dummy = None
 
-        dummy_id = int(data_type)
+            print(data_type, request.files["circuitImage"], request.form["points"])
 
-        with open("./mock_data/conponents.mock.json", "r") as f:
-            dummy = json.load(f)
+            if request.files["circuitImage"]:
+                pass
+            else:
+                raise Exception("회로 이미지를 전송하지 않음")
 
-        dummy_key = list(dummy.keys())[dummy_id]
-        points = dummy[dummy_key]["meta"]["points"]
-        scale = float(dummy[dummy_key]["meta"]["scale"])
-        V = int(dummy[dummy_key]["meta"]["voltage"])
-        components = dummy[dummy_key]["components"]
+            if request.form["points"]:
+                pass
+            else:
+                raise Exception("이미지 필수 정보 (4 꼭짓점, 전압, 스케일)가 전송되지 않음")
 
-        search_map = pd.read_pickle(
-            f"./mock_data/pinmap/{request.files['circuitImage'].filename}.pkl"
-        )
+            dummy_id = int(data_type)
 
-        vol_pinmap = pd.concat(
-            [search_map.iloc[:, 0:4], search_map.iloc[:, 24:28]], axis=1
-        )
+            with open("./mock_data/conponents.mock.json", "r") as f:
+                dummy = json.load(f)
 
-        body_pinmap = search_map.iloc[:, 4:24]
+            dummy_key = list(dummy.keys())[dummy_id]
+            points = dummy[dummy_key]["meta"]["points"]
+            scale = float(dummy[dummy_key]["meta"]["scale"])
+            V = int(dummy[dummy_key]["meta"]["voltage"])
+            components = dummy[dummy_key]["components"]
 
-        target_image = cv2.imdecode(
-            np.frombuffer(request.files["circuitImage"].read(), np.uint8),
-            cv2.IMREAD_COLOR,
-        )
+            search_map = pd.read_pickle(
+                f"./mock_data/pinmap/{request.files['circuitImage'].filename}.pkl"
+            )
 
-        pts = []
-        for point in points:
-            pts.append([int(point[0] / scale), int(point[1] / scale)])
+            vol_pinmap = pd.concat(
+                [search_map.iloc[:, 0:4], search_map.iloc[:, 24:28]], axis=1
+            )
 
-        base_point, target_image = toPerspectiveImage(
-            target_image, np.array(pts), PADDING
-        )
+            body_pinmap = search_map.iloc[:, 4:24]
 
-        _, buffer = cv2.imencode(".jpg", target_image)
-        transformedImg_base64 = base64.b64encode(buffer).decode()
+            target_image = cv2.imdecode(
+                np.frombuffer(request.files["circuitImage"].read(), np.uint8),
+                cv2.IMREAD_COLOR,
+            )
 
-        result_data = {
-            "transformedImg": transformedImg_base64,
-            "basePoint": base_point.tolist(),
-            "voltage": V,
-            "scale": 0.25,
-            "components": components,
-        }
+            pts = []
+            for point in points:
+                pts.append([int(point[0] / scale), int(point[1] / scale)])
 
-        return jsonify(result_data)
+            base_point, target_image = toPerspectiveImage(
+                target_image, np.array(pts), PADDING
+            )
+
+            _, buffer = cv2.imencode(".jpg", target_image)
+            transformedImg_base64 = base64.b64encode(buffer).decode()
+
+            result_data = {
+                "transformedImg": transformedImg_base64,
+                "basePoint": base_point.tolist(),
+                "voltage": V,
+                "scale": 0.25,
+                "components": components,
+            }
+
+            return jsonify(result_data)
+
+        except Exception as e:
+            return jsonify({"message": str(e)})
 
 
 @app.route("/network", methods=["GET", "POST"])
